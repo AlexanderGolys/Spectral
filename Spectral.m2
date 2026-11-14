@@ -3,13 +3,16 @@
 newPackage(
 	"Spectral",
 	Version => "0.1",
-	Headline => "drawing values in the spectral-m2 shell",
+	Date => "November 14, 2026",
+	Headline => "drawing values as structured, typed trees",
 	PackageImports => {"Complexes", "Varieties", "Text"},
 	Authors => {{
 		Name => "Alexander Golys",
 		Email => "alexandergolys@gmail.com",
-		HomePage => "https://github.com/AlexanderGolys/spectral-m2"
+		HomePage => "https://github.com/AlexanderGolys"
 	}},
+	HomePage => "https://github.com/AlexanderGolys/Spectral",
+	Keywords => {"Interfaces"},
 	DebuggingMode => false
 )
 
@@ -128,13 +131,15 @@ typesetMarked (SpecNet, Boolean) := (drawn, forced) -> (
 	operator := setting typesetOperands;
 	marked := not setting typewriter and (forced or mathematical or operator);
 	indexed := any(classes, class' -> instance(class', Type)
-		and (ancestor(Subscript, class') or ancestor(Superscript, class')));
+			and (ancestor(Subscript, class') or ancestor(Superscript, class')));
 	drawn ++ {
 		Typeset => marked,
 		Children => apply(#drawn.Children, position -> typesetMarked(
 			drawn.Children#position,
-			if operator then not (indexed and position > 0)
-			else marked and mathematical))
+			if operator then
+				not (indexed and position > 0)
+			else marked and mathematical
+		))
 	}
 )
 
@@ -427,7 +432,9 @@ specNet IndexedVariable := variable -> new SpecNet from (Subscript,
 	apply(toList variable, specNet))
 specNet Intermediate := part -> (
 	(name, component, shape) := toSequence take(part, 3);
-	level := if #part > 3 then part#3 else 1;
+	level := if #part > 3 then
+			part#3
+		else 1;
 	if unfoldable =!= null and unfoldable < level then
 		specNet name ++ {symbol Type => class component}
 	else specNet shape ++ {symbol Type => class component}
@@ -469,18 +476,25 @@ specNet ComplexMap := map -> (
 		apply(toList(lo .. hi), degree -> join({degree,
 			Intermediate {Subscript {name, degree}, complex_degree,
 				Holder {complex_degree}}},
-			if degree == lo then {}
-			else {matrixPart(symbol d, degree, complex.dd_degree)}))
+			if degree == lo then {} else {matrixPart(symbol d, degree,
+				complex.dd_degree)}))
 	);
-	targetName := if source map === target map then symbol C else symbol D;
-	mapName := if map === (source map).dd then symbol d else symbol f;
+	targetName := if source map === target map then
+			symbol C
+		else symbol D;
+	mapName := if map === (source map).dd then
+			symbol d
+		else symbol f;
 	shift := degree map;
 	(lo, hi) := concentration source map;
 	components := select(apply(toList(lo .. hi), degree -> (
 		component := map_degree;
-		if component == 0 then null
-		else if shift != 0 then {degree, Subscript {mapName, degree}}
-		else {degree, matrixPart(mapName, degree, component)})),
+		if component == 0 then
+			null
+		else if shift != 0 then {degree, Subscript {mapName, degree}} else {
+			degree, matrixPart(mapName, degree, component)
+		}
+	)),
 		entry -> entry =!= null);
 	unfolding(map, ComplexMapExpression {
 		shift,
@@ -573,7 +587,12 @@ Node
   Description
     Text
       @TO specNet@ preserves expression structure and the classes of components.
-      @TO specType@ independently formats the type of a value.
+      @TO specType@ independently formats the type of a value. Both are what
+      the @HREF{"https://github.com/AlexanderGolys/spectral-m2", "spectral-m2"}@
+      shell draws its results from, and work on their own: @TO speek@ shows the
+      structure a value is drawn as.
+    Example
+      speek(1/2)
   Subnodes
     SpecNet
     specNet
