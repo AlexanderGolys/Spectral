@@ -8,6 +8,7 @@ new SpecNet from Sequence := (SpecNet, shape) -> hashTable {
 	Children => toList shape#1,
 	symbol Text => null
 }
+
 SpecNet ++ List := SpecNet => (drawing, fields) -> new SpecNet from merge(drawing,
 	hashTable fields, last@@splice)
 -- What a drawing stands for: its value's class, or for a component that is only
@@ -23,6 +24,7 @@ nearestSetting (Symbol, Type) := (field, type) -> (
 		error(toString field | " must be true or false");
 	owner#field
 )
+
 nearestSetting (Symbol, Thing) := (field, x) -> false
 
 -- The nearest setting of `depth` in the ancestry of x's class.
@@ -60,6 +62,8 @@ drawing := new MutableList
 -- How many more values may be unfolded inside the one being drawn; unset
 -- outside a drawing.
 unfoldable := null
+-- Clear what a drawing that threw part-way left behind, so the next drawing
+-- starts outside any; the shell calls it after every result.
 forgetDrawing = () -> (drawing = new MutableList; unfoldable = null)
 
 -- A container drawn as `items`, each at the container's own depth.
@@ -199,7 +203,10 @@ speek' (ZZ, SpecNet) := Option => (depth, drawn) -> valueClass drawn => (
 )
 speek Thing := x -> speek'(2, x)
 
--- Presentation metadata is attached only at the transport boundary.
+-- What the shell sends for a value and its type: the drawing marked for
+-- typesetting, the value's net and code beside it, and an opaque leaf when
+-- drawing throws, so a broken specNet never loses the result. Presentation
+-- metadata is attached only here, at the boundary to the shell.
 drawnAs = x -> try typesetMarked(specNet x, false) ++ {
 	Fallback => (try toString net x),
 	Code => (try toString x)

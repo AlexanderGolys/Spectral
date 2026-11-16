@@ -13,14 +13,16 @@ documentationTags Hypertext := List => page -> unique flatten apply(toList page,
 documentationTags TO := documentationTags TO2 := documentationTags TOH :=
 List => link -> {link#0}
 
-attributeText String := List => text -> fold((escaped, entity) ->
+attributeText String := String => text -> fold((escaped, entity) ->
 		replace(entity#0, entity#1, escaped), text,
 	{("&", "&amp;"), ("\"", "&quot;"), ("<", "&lt;"), (">", "&gt;")})
 
--- M2 links a tag wherever it appears with the same target, so the target its
--- own link gets is the one to replace.
+-- keysLinked(page, document): the HTML `page` of `document` with each link to a
+-- node pointing at the node's key, spelled as the M2 string `help` reads, so
+-- the shell can open it. M2 links a tag wherever it appears with the same
+-- target, so the target its own link gets is the one to replace.
 keysLinked = method()
-keysLinked (String, Hypertext) := List => (page, document) -> fold((linked, tag) -> (
+keysLinked (String, Hypertext) := String => (page, document) -> fold((linked, tag) -> (
 	anchor := html TO {tag};
 	target := regex(///href="[^"]*"///, anchor);
 	if target === null then
@@ -29,9 +31,10 @@ keysLinked (String, Hypertext) := List => (page, document) -> fold((linked, tag)
 		separate(regexQuote substring(target#0, anchor), linked))
 ), page, documentationTags document)
 
--- `file:///dir/name.m2#L1:C2` is spelled with its whole directory, which is
--- most of a line and none of what is wanted; its text keeps the file's name,
--- one directory above it, and the position.
+-- pathsShortened page: the HTML `page` with the text of each link to a file cut
+-- as foldedPath cuts it. `file:///dir/name.m2#L1:C2` is spelled with its whole
+-- directory, which is most of a line and none of what is wanted; its text
+-- keeps the file's name, one directory above it, and the position.
 pathsShortened = method()
 pathsShortened String := page -> (
 	pattern := ///(<a href="file://([^"#]*)[^"]*">)([^<]*)</a>///;
@@ -48,7 +51,9 @@ pathsShortened String := page -> (
 	shortened | page
 )
 
--- A source position set as code links to its file, found on the load path.
+-- sourcesLinked page: the HTML `page` with each source position set as code,
+-- `name.m2:12:3`, made a link to its file, found on the load path; a position
+-- whose file cannot be found stays as it is.
 sourcesLinked = method()
 sourcesLinked String := page -> (
 	pattern := ///<span class="tt">([^<]*\.m2):([0-9]+):([0-9]+)</span>///;

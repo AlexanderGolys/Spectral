@@ -32,7 +32,8 @@ Subscript.typesetOperands = true
 MapExpression.typeset = true
 MapExpression.typesetOperands = true
 
--- A label centred beneath an expression, keeping the expression's baseline.
+-- UnderExpression{base, label}: a label centred beneath an expression, keeping
+-- the expression's baseline; a complex sets each module's degree under it.
 UnderExpression = new HeaderType of Expression
 UnderExpression.typeset = true
 UnderExpression.typesetOperands = true
