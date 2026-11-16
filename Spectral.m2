@@ -36,7 +36,7 @@ export {
 -- The print width M2 runs documentation examples at. Core keeps it to itself,
 -- and archived example output cannot be unwrapped without it.
 exampleWidth := value Core#"private dictionary"#"ArgPrintWidthN"
-
+   
 SpecNet = new Type of HashTable
 
 UnderExpression = new HeaderType of Expression
@@ -50,6 +50,7 @@ net AlignedExpression := aligned -> netList(apply(toList aligned, toList),
 -- {name, part, shape, level}: spelled by its name until the drawing has that
 -- many levels left to unfold (one by default), then drawn from its shape.
 Intermediate = new HeaderType of Expression
+
 -- A map of complexes as its two complexes, one above the other with each degree
 -- in a column of its own, and the components between them:
 -- ComplexMapExpression{degree, source, target, components}, where a complex is a
@@ -126,7 +127,7 @@ nearestSetting (Symbol, Thing) := (field, x) -> false
 -- an operator, unless its class keeps a typewriter face.
 typesetMarked (SpecNet, Boolean) := (drawn, forced) -> (
 	classes := {drawn.Classes, valueClass drawn};
-	setting := field -> any(classes, class' -> nearestSetting(field, class'));
+	setting := field -> any(classes, nearestSetting_field);
 	mathematical := setting typeset;
 	operator := setting typesetOperands;
 	marked := not setting typewriter and (forced or mathematical or operator);
@@ -179,11 +180,11 @@ parameters CoherentSheaf :=
 parameters Variety := x -> {ring x}
 
 parameters Matrix :=
-parameters SheafMap := f -> {MapExpression{f.target, f.source}}
+parameters SheafMap := f -> { MapExpression{f.target, f.source} }
 
-parameters QuotientRing := x -> {ambient x}
-parameters PolynomialRing := x -> {coefficientRing x}
-parameters SheafOfRings := x -> {variety x}
+parameters QuotientRing := x -> { ambient x }
+parameters PolynomialRing := x -> { coefficientRing x }
+parameters SheafOfRings := x -> { variety x }
 
 -- What a value is drawn from. The rank of a module or sheaf is an index on it,
 -- as in OO_X^2, rather than a power, and M2 spells rank one as an explicit
@@ -400,6 +401,15 @@ specNet MutableList :=
 specNet Option :=
 	items -> contentsOf(items, toList items)
 
+-- Class hierarchies keep their branches, rather than an opaque table summary.
+-- Sorting the labels gives each level the same order as M2's native net.
+-- A class name is a label, so a ring name never typesets the entire hierarchy.
+specNet Descent := tree -> contentsOf(tree,
+    apply(sort(pairs tree, pair -> toString net pair#0), pair ->
+        new SpecNet from (RowExpression, {
+            specNet(toString net pair#0) ++ {Highlight => {"Type"}},
+            specNet pair#1})))
+
 -- A table keeping the stock formatting shows its pairs.
 specNet HashTable := table -> (
 	stock := base -> lookup(expression, class table) === lookup(expression, base)
@@ -489,11 +499,10 @@ specNet ComplexMap := map -> (
 	(lo, hi) := concentration source map;
 	components := select(apply(toList(lo .. hi), degree -> (
 		component := map_degree;
-		if component == 0 then
-			null
-		else if shift != 0 then {degree, Subscript {mapName, degree}} else {
-			degree, matrixPart(mapName, degree, component)
-		}
+		if component != 0 then
+			if shift != 0 then {degree, Subscript {mapName, degree}} else {
+				degree, matrixPart(mapName, degree, component)
+			}
 	)),
 		entry -> entry =!= null);
 	unfolding(map, ComplexMapExpression {
