@@ -36,6 +36,60 @@ specNet Complex := complex -> (
 -- is {degree, map}; the module at the lowest degree has no differential.
 ComplexMapExpression = new HeaderType of Expression
 
+-- It is laid out as a diagram: the source complex above the target, between
+-- zeros, each module in the column of its degree, the degrees numbered beneath,
+-- and each component an arrow down from its source module to its target. A map
+-- of nonzero degree runs its components across columns, which characters cannot
+-- draw, so it also carries the Straight diagram, the target shifted under the
+-- components' sources and each complex numbered on its own.
+formatted ComplexMapExpression := shape -> (
+	aligned := arranged(shape, false);
+	if shape#0 == 0 or #shape#3 == 0 then
+		aligned
+	else aligned ++ {Straight => arranged(shape, true)}
+)
+arranged (ComplexMapExpression, Boolean) := (shape, straight) -> (
+	(shift, source, target, components) := toSequence shape;
+	degrees := chain -> apply(chain, entry -> entry#0);
+	-- How far left of its degree's column each complex's modules sit, the row
+	-- each complex takes, and the rows its degrees are numbered on.
+	offsets := {0, if straight then
+				shift
+			else 0};
+	rows := if straight then {1, 2} else {0, 1};
+	numbered := if straight then
+			{(0, 0, degrees source), (3, shift, degrees target)} else {(2, 0,
+				degrees source | degrees target)};
+	-- The first column is the zero before the lowest degree.
+	lowest := min flatten apply(2, k -> apply(degrees {source, target}#k, degree ->
+			degree - offsets#k));
+	column := (degree, offset) -> degree - offset - lowest + 1;
+	zero := specNet 0;
+	-- Each complex as its pieces and its arrows.
+	drawn := apply(2, k -> (
+		chain := {source, target}#k;
+		at := degree -> {rows#k, column(degree, offsets#k)};
+		(first', last') := (min degrees chain, max degrees chain);
+		{{{at(first' - 1), zero}, {at(last' + 1), zero}} | apply(chain, entry ->
+				{at entry#0, specNet entry#1}),
+			{{at first', at(first' - 1), null}, {at(last' + 1), at last', null}}
+				| apply(select(chain, entry -> #entry > 2), entry ->
+						{at entry#0, at(entry#0 - 1), specNet entry#2})}
+	));
+	new SpecNet from {
+		Shape => "Diagram",
+		Pieces => flatten apply(drawn, first) | flatten apply(numbered, (row,
+			offset, numbers) ->
+				apply(toList(min numbers .. max numbers), degree ->
+						{{row, column(degree, offset)}, specNet degree})),
+		Arrows => flatten apply(drawn, last) | apply(components, component -> {
+			{rows#0, column(component#0, offsets#0)},
+			{rows#1, column(component#0 + shift, offsets#1)},
+			specNet component#1
+		})
+	}
+)
+
 -- A map is drawn as its two complexes aligned by degree, each nonzero component
 -- running down from its source to its target, as many columns across as the
 -- map's degree: straight down for a chain map, one column for a differential.

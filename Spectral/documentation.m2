@@ -6,16 +6,19 @@ Node
     structured value and type formatting
   Description
     Text
-      @TO specNet@ preserves expression structure and the classes of components.
-      @TO specType@ independently formats the type of a value. Both are what
-      the @HREF{"https://github.com/AlexanderGolys/spectral-m2", "spectral-m2"}@
+      @TO specNet@ lays a value out as a tree of shapes, as TeX lays out a
+      formula, each atom coloured by its class. @TO specType@ lays out the type
+      of a value the same way. Both are what the
+      @HREF{"https://github.com/AlexanderGolys/spectral-m2", "spectral-m2"}@
       shell draws its results from, and work on their own: @TO speek@ shows the
-      structure a value is drawn as.
+      tree a value is drawn as.
     Example
       speek(1/2)
   Subnodes
     SpecNet
     specNet
+    atom
+    Highlight
     specType
     speek
     UnderExpression
@@ -51,17 +54,20 @@ Node
   Key
     SpecNet
   Headline
-    transmissible expression structure with component classes
+    a value laid out as a tree of shapes
   Description
     Text
-      A SpecNet holds the class that lays it out under Classes, its ordered
-      Children, and the symbol Text, whose string replaces the children of an
-      opaque value. Optional fields annotate it: Highlight names the semantic
-      class to colour it by, Tex its native TeX, Target a source or
-      documentation link, and Html, TypeNames and ExampleWidth a documentation
-      page. Fallback and Code carry the value's net and input spelling. Class
-      objects are transmitted as their ancestry; the original value is never
-      transmitted.
+      A SpecNet is one node of a layout, its parts in fields named by its
+      shape: an Atom of text in the colour of its class, a Row or a Join of
+      items, a Script, a Fraction, a Fence, a Grid, a label Over or Under a
+      base, a Diagram of pieces joined by arrows, or a Tree. Each shape has a
+      constructor, listed under @TO atom@, and any node may carry the
+      attributes listed under @TO Highlight@. The shell is sent the tree with
+      the classes its atoms are coloured by gathered in one table; the value
+      itself is never sent.
+    Example
+      R = QQ[x, y];
+      speek'(2, (x + 1)/2)
 Node
   Key
     specNet
@@ -69,17 +75,37 @@ Node
     specNet'
     (specNet', ZZ, Thing)
   Headline
-    format a value without flattening its expression
+    lay a value out as a tree of shapes
   Usage
     specNet x
     specNet'(depth, x)
   Description
     Text
-      The default method unfolds @TO expression@, preserving each component's
-      class, until an expression holds nothing but its value: a named value
-      ends at its symbol, so nothing is read from inside rings or varieties.
-      Install @TO expression@ for a new type to compose existing expression
-      shapes, or install specNet to customize its transmissible representation.
+      The default method unfolds @TO expression@ until an expression holds
+      nothing but its value: a named value ends at its symbol, so nothing is
+      read from inside rings or varieties. Each class of expression is laid out
+      by @TO formatted@, a sum between plus signs, a power as a script, a
+      matrix as a grid. Install @TO expression@ for a new type to compose
+      existing expression shapes, @TO formatted@ for an expression class to lay
+      it out differently, or specNet for a type to draw it from the shapes
+      under @TO atom@ directly.
+    Example
+      R = QQ[x, y];
+      formatted Sum := s -> joined(apply(toList s, specNet), " (+) ", "Operator");
+      speek'(2, x + y)
+Node
+  Key
+    formatted
+    (formatted, Expression)
+  Headline
+    lay out an expression of a class
+  Usage
+    formatted e
+  Description
+    Text
+      The layout of an expression of e's class, which @TO specNet@ marks with
+      that class. A class without a layout of its own is spelled by its name
+      over its parts.
 Node
   Key
     valueDepth
@@ -164,8 +190,84 @@ Node
     speek'
     (speek', ZZ, Thing)
   Headline
-    inspect structured formatting
+    the tree a value is drawn as, as peek shows an object
   Usage
     speek x
     speek'(depth, x)
+  Description
+    Text
+      Each node is spelled by its shape with its parts in braces, each atom by
+      its text and class, to the given depth, one level by default.
+    Example
+      speek'(3, matrix{{1, 2}})
+Node
+  Key
+    atom
+    (atom, String, Thing)
+    row
+    (row, List)
+    joined
+    (joined, List, String, Thing)
+    listed
+    (listed, List, String, String)
+    script
+    (script, SpecNet, Thing, Thing)
+    (fraction, SpecNet, SpecNet)
+    fence
+    (fence, String, String, SpecNet)
+    parenthesized
+    (parenthesized, SpecNet)
+    grid
+    (grid, List, String)
+    labelled
+    (labelled, String, SpecNet, SpecNet)
+    drawsAs
+    (drawsAs, SpecNet, Type)
+  Headline
+    the shapes a SpecNet is built from
+  Usage
+    atom(text, class)
+    row items
+    joined(items, separator, class)
+    listed(items, left, right)
+    script(base, sub, sup)
+    fraction(numerator, denominator)
+    fence(left, right, body)
+    parenthesized body
+    grid(rows, align)
+    labelled(shape, base, label)
+    drawsAs(drawn, type)
+  Description
+    Text
+      An atom is text in the colour of its class: a type, or the name of a
+      colour such as "Operator", "Delimiter" or "Punctuation". A row sets its
+      items side by side, and a join puts an atom of the separator between
+      each two; listed draws values, joins them by commas and fences them.
+      A script is a base with a subscript, a superscript or both, the one
+      absent null. A grid's rows are lists of cells, aligned as "Matrix", in
+      parentheses, "Bare", "LeftAligned", or "Aligned", where each row's last
+      cell runs on. A label sits "Over" or "Under" its base. drawsAs tells
+      whether a drawing is laid out as an expression class.
+    Example
+      R = QQ[x, y];
+      speek'(2, script(atom("x", Symbol), specNet 1, specNet 2))
+      drawsAs(specNet(x + 1), Sum)
+Node
+  Key
+    Highlight
+    Reach
+    Target
+    Tex
+  Headline
+    what any node of a SpecNet may carry
+  Description
+    Text
+      Highlight is a class the node and its parts are coloured as, in place of
+      their own; Reach, when set, is how many levels below the node it reaches,
+      0 for the node alone. Target is a link the node opens, and Tex the TeX of
+      an atom that has its own.
+    Example
+      R = QQ[x, y];
+      specNet Ideal := I -> (lookup(specNet, Thing)) I ++ {Highlight => Keyword, Reach => 1};
+      speek ideal(x, y)
 ///

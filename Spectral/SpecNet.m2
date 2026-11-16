@@ -1,21 +1,100 @@
--- The drawing itself: what a SpecNet is, how a value unfolds into one, and what
--- every class draws as until its own block says otherwise.
+-- The drawing itself: what a SpecNet is, the shapes it is built from, how a value
+-- unfolds into one, and what every class draws as until its own block says otherwise.
 
--- A drawing is a class laid out over ordered children; an opaque one is spelled
--- by its text instead. Further fields annotate it: `drawing ++ {Tex => …}`.
-new SpecNet from Sequence := (SpecNet, shape) -> hashTable {
-	Classes => shape#0,
-	Children => toList shape#1,
-	symbol Text => null
-}
-
-SpecNet ++ List := SpecNet => (drawing, fields) -> new SpecNet from merge(drawing,
+-- A SpecNet is one shaped node with its parts in named fields, as a formula in
+-- TeX is a tree of such constructs:
+--   Atom      Text drawn as its Class, maybe with its own Tex: a name, a number, a sign
+--   Row       Items set side by side; a line too long may break between them
+--   Join      Items with a Separator between each two, as a list's entries
+--   Script    a Base with a Sub, a Sup, or both, as x_2^2
+--   Fraction  a Numerator over a Denominator
+--   Fence     a Body between the Left and Right delimiters
+--   Grid      Rows of cells, aligned as Align says: "Matrix" in parentheses,
+--             "Bare", "LeftAligned", or "Aligned", whose last cell of a row runs
+--             on; a matrix may carry the Degrees of its rows beside them
+--   Over, Under  a Label above or below a Base
+--   Diagram   Pieces {{row, column}, piece} joined by Arrows {from, to, label},
+--             each end a {row, column}, the label null when there is none
+--   Tree      Branches {label, subtree}, a hierarchy drawn branch by branch
+-- Any node may carry a Highlight, the class it and its parts are coloured as
+-- in place of their own, reaching Reach levels below it (all of them when
+-- unset), and a Target it links to:
+--   specNet Ideal := I -> (lookup(specNet, Thing)) I ++ {Highlight => Keyword} While drawn, a node also keeps the Class it is drawn as and the
+-- Type of the value it stands for, which decide what is typeset.
+-- 1/2 is Fraction{Atom{"1", ZZ}, Atom{"2", ZZ}}.
+new SpecNet from List := (SpecNet, fields) -> hashTable fields
+SpecNet ++ List := SpecNet => (node, fields) -> new SpecNet from merge(node,
 	hashTable fields, last@@splice)
--- What a drawing stands for: its value's class, or for a component that is only
--- part of an expression, the expression's own.
-valueClass SpecNet := drawn -> if drawn.?Type then drawn.Type else drawn.Classes
 specNet SpecNet := identity
 net SpecNet := net@@speek
+
+atom (String, Thing) := (text, class') -> new SpecNet from {
+	Shape => "Atom",
+	symbol Text => text,
+	Class => class'
+}
+row List := items -> new SpecNet from {
+	Shape => "Row",
+	Items => items
+}
+joined (List, String, Thing) := (items, separator, class') -> new SpecNet from {
+	Shape => "Join",
+	Items => items,
+	Separator => atom(separator, class')
+}
+listed (List, String, String) := (items, left, right) -> fence(left, right,
+	joined(apply(items, specNet), ", ", "Delimiter"))
+script (SpecNet, Thing, Thing) := (base, sub, sup) -> new SpecNet from {
+	Shape => "Script",
+	Base => base,
+	Sub => sub,
+	Sup => sup
+}
+fraction (SpecNet, SpecNet) := (numerator, denominator) -> new SpecNet from {
+	Shape => "Fraction",
+	Numerator => numerator,
+	Denominator => denominator
+}
+fence (String, String, SpecNet) := (left, right, body) -> new SpecNet from {
+	Shape => "Fence",
+	Left => left,
+	Right => right,
+	Body => body
+}
+parenthesized SpecNet := body -> fence("(", ")", body)
+grid (List, String) := (rows, align) -> new SpecNet from {
+	Shape => "Grid",
+	Rows => rows,
+	Align => align
+}
+labelled (String, SpecNet, SpecNet) := (shape, base, label) -> new SpecNet from {
+	Shape => shape,
+	Base => base,
+	Label => label
+}
+
+-- Whether a node is drawn as `type`, or as something derived from it.
+drawsAs (SpecNet, Type) := (node, type) -> (node#?Class
+		and instance(node.Class, Type) and ancestor(type, node.Class))
+
+-- The fields holding a node's parts, in the order the parts are read.
+partFields := {Items, Separator, Base, Sub, Sup, Numerator, Denominator, Label,
+	Body, Rows, Degrees, Pieces, Arrows, Straight, Branches}
+-- The parts a node is drawn from: every SpecNet in its part fields.
+parts SpecNet := node -> flatten apply(select(partFields, field -> node#?field),
+	field -> nested node#field)
+nested Thing := value -> {}
+nested SpecNet := node -> {node}
+nested VisibleList := items -> flatten apply(toList items, nested)
+
+-- The value with every SpecNet in it passed through `change`.
+changedIn (Thing, Function) := (value, change) -> value
+changedIn (SpecNet, Function) := (node, change) -> change node
+changedIn (VisibleList, Function) := (items, change) -> apply(items,
+	item -> changedIn(item, change))
+-- The node with each part passed through `change(field, part)`.
+partsChanged (SpecNet, Function) := (node, change) -> new SpecNet from applyPairs(node,
+	(field, value) -> (field, changedIn(value, part -> change(field, part))))
 
 -- The nearest setting of `field` in the ancestry of `type`.
 nearestSetting (Symbol, Type) := (field, type) -> (
@@ -24,7 +103,6 @@ nearestSetting (Symbol, Type) := (field, type) -> (
 		error(toString field | " must be true or false");
 	owner#field
 )
-
 nearestSetting (Symbol, Thing) := (field, x) -> false
 
 -- The nearest setting of `depth` in the ancestry of x's class.
@@ -35,48 +113,51 @@ configuredDepth (Symbol, Thing) := (depth, x) -> (
 	owner#depth
 )
 
--- Mark each part of a drawing whether it is typeset: by its own class or the
--- class of the value it stands for, or for being held by a typeset value or
--- an operator, unless its class keeps a typewriter face.
-typesetMarked (SpecNet, Boolean) := (drawn, forced) -> (
-	classes := {drawn.Classes, valueClass drawn};
-	setting := field -> any(classes, nearestSetting_field);
+-- Mark each atom whether it is typeset: by the class it is drawn as or the
+-- class of the value it stands for, or for being held by a typeset value or an
+-- operator, unless its class keeps a typewriter face. The script of a subscript
+-- or superscript keeps its own setting; a node built only to lay out its parts
+-- passes on what it was given.
+typesetMarked (SpecNet, Boolean) := (node, forced) -> (
+	if not (node#?Class or node#?symbol Type) then
+		return partsChanged(node, (field, part) -> typesetMarked(part, forced));
+	classes := apply({Class, symbol Type}, field -> if node#?field then
+				node#field);
+	setting := field -> any(classes, class' -> nearestSetting(field, class'));
 	mathematical := setting typeset;
 	operator := setting typesetOperands;
 	marked := not setting typewriter and (forced or mathematical or operator);
 	indexed := any(classes, class' -> instance(class', Type)
 			and (ancestor(Subscript, class') or ancestor(Superscript, class')));
-	drawn ++ {
-		Typeset => marked,
-		Children => apply(#drawn.Children, position -> typesetMarked(
-			drawn.Children#position,
-			if operator then
-				not (indexed and position > 0)
-			else marked and mathematical
-		))
-	}
+	if node.Shape === "Atom" then
+		node ++ {Typeset => marked}
+	else partsChanged(node, (field, part) -> typesetMarked(part,
+		if operator then
+			not (indexed and member(field, {Sub, Sup}))
+		else marked and mathematical))
 )
 
 -- Values being drawn: a container that holds itself is drawn once.
-drawing := new MutableList
+beingDrawn := new MutableList
 -- How many more values may be unfolded inside the one being drawn; unset
 -- outside a drawing.
 unfoldable := null
 -- Clear what a drawing that threw part-way left behind, so the next drawing
 -- starts outside any; the shell calls it after every result.
-forgetDrawing = () -> (drawing = new MutableList; unfoldable = null)
+forgetDrawing = () -> (beingDrawn = new MutableList; unfoldable = null)
 
--- A container drawn as `items`, each at the container's own depth.
-contentsOf (Thing, List) := (container, items) -> (
-	if any(toList drawing, ancestor -> ancestor === container) then
+-- A container drawn by `draw`, at the container's own depth; a container
+-- already being drawn, which holds itself, is drawn opaque.
+contentsOf (Thing, Function) := (container, draw) -> (
+	if any(toList beingDrawn, ancestor -> ancestor === container) then
 		return opaque container;
-	drawing#(#drawing) = container;
+	beingDrawn#(#beingDrawn) = container;
 	budget := unfoldable;
-	result := try new SpecNet from (class container, apply(items, specNet))
+	result := try draw container
 		else opaque container;
 	unfoldable = budget;
-	drawing = new MutableList from drop(toList drawing, -1);
-	result
+	beingDrawn = new MutableList from drop(toList beingDrawn, -1);
+	result ++ {symbol Type => class container}
 )
 
 -- Draw x from `shape`, its expression with each parameter spelled in place
@@ -85,10 +166,7 @@ unfolding (Thing, Thing) := (x, shape) -> (
 	unfoldable ?? return specNet'(configuredDepth(symbol valueDepth, x), x);
 	name := placeholder x;
 	if name =!= null and unfoldable <= 0 then
-		return opaque x ++ {
-			Classes => Symbol,
-			symbol Text => name
-		};
+		return atom(name, Symbol) ++ {symbol Type => class x};
 	held := fold((drawn, parameter) -> (
 		spelled := expression parameter;
 		substituted := part -> if part === spelled then
@@ -130,7 +208,7 @@ specNet Intermediate := part -> (
 
 -- Thing: what every class draws as until its own block says otherwise.
 -- A value is drawn as what its expression is made of, down to expressions that
--- hold nothing but the value itself; its type is a bounded fold of that drawing.
+-- hold nothing but the value itself; its type is a bounded fold of its parts.
 Thing.typeDepth = 1
 Thing.valueDepth = 1
 -- Whether a drawing is set as typeset maths: values of a mathematical type,
@@ -138,13 +216,13 @@ Thing.valueDepth = 1
 -- typeset with it; anything typeset only to sit beside it, a name or a string
 -- in the same list, keeps a typewriter face.
 Thing.typeset = false
--- Operators set their operands as maths, all but the index of a subscript or
+-- Operators set their operands as maths, all but the script of a subscript or
 -- superscript. Containers only hold their entries, which keep their own setting.
 Thing.typesetOperands = false
 -- An operator's operands of a typewriter class still keep a typewriter face.
 Thing.typewriter = false
 -- A mathematical type is typed by the values it is built over rather than by
--- its expression's components.
+-- the parts of its expression.
 Thing.typedByParameters = false
 -- Structures whose kind goes by a conventional name are what the value depth
 -- counts: past it an unnamed one keeps only that name.
@@ -154,12 +232,7 @@ parameters Thing := x -> {}
 -- What a value is drawn from.
 spelledShape (Thing, Thing) := (x, shape) -> shape
 -- Values whose expression holds nothing but themselves.
-opaque Thing := x -> new SpecNet from {
-	Classes => class x,
-	symbol Type => class x,
-	Children => {},
-	symbol Text => spelling x
-}
+opaque Thing := x -> atom(spelling x, class x) ++ {symbol Type => class x}
 spelling Thing := x -> try toString x else toString class x
 specNet Thing := x -> (
 	shape := expression x;
@@ -170,45 +243,62 @@ specNet Thing := x -> (
 	else unfolding(x, spelledShape(x, shape))
 )
 specType Thing := x -> specType'(configuredDepth(symbol typeDepth, x), x)
--- Each level of a type below the outermost folds one level of the value, or for
--- a type typed by its parameters, unfolds each parameter once.
+-- Each level of a type below the outermost unfolds the values it is built
+-- over, or the parts of its expression, one level further.
 specType' (ZZ, Thing) := (depth, x) -> (
-	if depth <= 1 then
-		specNet class x
-	else if nearestSetting(symbol typedByParameters, class x) then
-		new SpecNet from (RowExpression, {
-			specNet class x,
-			new SpecNet from (Array, apply(parameters x,
-				parameter -> specNet'(depth - 2, parameter)))
-		})
-	else specType'(depth, specNet'(depth - 1, x))
-)
-specType' (ZZ, SpecNet) := (depth, drawn) -> (
-	if depth <= 1 or drawn.Text =!= null then
-		specNet valueClass drawn
-	else new SpecNet from (RowExpression, {
-		specNet valueClass drawn,
-		new SpecNet from (Array, apply(drawn.Children,
-			child -> specType'(depth - 1, child)))
-	})
+	shape := expression x;
+	inner := if depth <= 1 then
+			return specNet class x
+		else if nearestSetting(symbol typedByParameters, class x) then
+		apply(parameters x, parameter -> specNet'(depth - 2, parameter))
+	else if instance(shape, Expression) and not instance(shape, Holder) then
+		apply(toList shape, part -> specType'(depth - 1,
+			if instance(part, Holder) then
+				part#0
+			else part))
+	else return specNet class x;
+	row {specNet class x, fence("[", "]", joined(inner, ", ", "Delimiter"))}
 )
 
+-- speek x: the SpecNet x is drawn as, one level deep, as peek shows an object;
+-- speek'(depth, x) shows it `depth` levels deep.
 speek' (ZZ, Thing) := (depth, x) -> speek'(depth, specNet x)
-speek' (ZZ, SpecNet) := Option => (depth, drawn) -> valueClass drawn => (
-	if drawn.Text =!= null then
-		drawn.Text
+speek' (ZZ, SpecNet) := (depth, node) -> (
+	if node.Shape === "Atom" then
+		"Atom{" | format node.Text | ", " | toString node.Class | "}"
 	else if depth <= 0 then
-		"..."
-	else apply(drawn.Children, child -> speek'(depth - 1, child))
+		node.Shape | "{...}"
+	else node.Shape | "{" | demark(", ", apply(parts node, part ->
+			speek'(depth - 1, part))) | "}"
 )
-speek Thing := x -> speek'(2, x)
+speek Thing := x -> speek'(1, x)
 
--- What the shell sends for a value and its type: the drawing marked for
--- typesetting, the value's net and code beside it, and an opaque leaf when
--- drawing throws, so a broken specNet never loses the result. Presentation
--- metadata is attached only here, at the boundary to the shell.
-drawnAs = x -> try typesetMarked(specNet x, false) ++ {
-	Fallback => (try toString net x),
-	Code => (try toString x)
-} else opaque x
-typedAs = x -> try typesetMarked(specType x, false) else opaque class x
+-- What the shell is sent for a value or its type: the SpecNet with each class
+-- it is drawn as sent once, in its Classes table, which every atom's Class and
+-- every Highlight point into. What only decides the drawing stays behind.
+transmitted SpecNet := node -> (
+	classes := new MutableHashTable;
+	index := class' -> (
+		if not classes#?class' then
+			classes#class' = #classes;
+		classes#class'
+	);
+	sent := node -> new SpecNet from join(
+		select(pairs partsChanged(node, (field, part) -> sent part), (field, value) ->
+				not member(field, {Class, symbol Type, Highlight})),
+		if node.Shape === "Atom" then {Class => index node.Class} else {},
+		if node.?Highlight then {Highlight => index node.Highlight} else {}
+	);
+	body := sent node;
+	body ++ {symbol Classes => apply(sort apply(pairs classes, reverse),
+		(position, class') -> if instance(class', Type) then
+				class'
+			else {class'})}
+)
+drawnAs = x -> transmitted(try typesetMarked(specNet x, false)
+		else opaque x) ++ {
+			Fallback => (try toString net x),
+			Code => (try toString x)
+		}
+typedAs = x -> transmitted(try typesetMarked(specType x, false)
+		else opaque class x)

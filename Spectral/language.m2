@@ -12,12 +12,13 @@ Nothing.typewriter = true
 opaque Symbol := name -> (lookup(opaque, Thing)) name ++ {symbol Type => class value name}
 
 -- An indexed variable x_1 is drawn as the subscript it is spelled with.
-specNet IndexedVariable := variable -> new SpecNet from (Subscript,
-	apply(toList variable, specNet))
+specNet IndexedVariable := variable -> specNet new Subscript from toList variable
 
 -- An operator keyword is coloured as an operator; any other as a keyword.
 specNet Keyword := keyword -> opaque keyword ++ {
-	Highlight => if operatorAttributes#?keyword then {"Operator"} else Keyword
+	Highlight => if operatorAttributes#?keyword then
+			"Operator"
+		else Keyword
 }
 
 -- A function links to its source.

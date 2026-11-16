@@ -20,29 +20,44 @@ newPackage(
 export {
 	"SpecNet",
 	"specNet",
+	"specNet'",
 	"specType",
 	"specType'",
 	"speek",
 	"speek'",
+	"formatted",
+	"atom",
+	"row",
+	"joined",
+	"listed",
+	"script",
+	"fence",
+	"parenthesized",
+	"grid",
+	"labelled",
+	"drawsAs",
+	"Highlight",
+	"Reach",
+	"Target",
+	"Tex",
 	"UnderExpression",
 	"AlignedExpression",
 	"typeDepth",
 	"valueDepth",
 	"typeset",
 	"typesetOperands",
-	"typewriter",
-	"specNet'"
+	"typewriter"
 }
 
--- A drawing: the class that lays it out under Classes, its ordered Children,
--- and for an opaque leaf the Text that replaces them, plus optional annotations
--- (Type, Highlight, Tex, Target, Typeset, …); see Spectral/SpecNet.m2.
--- 1/2 is {Classes => Divide, Children => {<1>, <2>}}, each child a leaf ZZ.
+-- A drawing: one shaped node of a tree laid out as TeX lays out a formula, its
+-- parts in named fields; Spectral/SpecNet.m2 lists the shapes.
+-- 1/2 is Fraction{Atom{"1", ZZ}, Atom{"2", ZZ}}.
 SpecNet = new Type of HashTable
 
--- The public drawing, what the shell shows a value as. Install it for a class
--- to draw that class differently.
--- specNet x: x drawn from its expression, the classes of every part kept.
+-- The public drawing, what the shell shows a value as. Install specNet for a
+-- class to draw its values differently, or formatted for an expression class to
+-- lay its expressions out differently.
+-- specNet x: x drawn from its expression, each part laid out by its class.
 specNet = method(Dispatch => Thing, TypicalValue => SpecNet)
 -- specNet'(depth, x): specNet x unfolding `depth` unnamed values deep, in
 -- place of x's class's valueDepth.
@@ -50,25 +65,65 @@ specNet' = method(TypicalValue => SpecNet)
 -- specType x: the type annotation shown beside x, as detailed as its class's
 -- typeDepth: 1/2 is QQ, and R^2, a module of typeDepth 2, is Module[R].
 specType = method(Dispatch => Thing, TypicalValue => SpecNet)
--- specType'(depth, x): specType x at an explicit depth. Also given a drawing,
--- it folds the drawing's parts to their classes, one level per depth.
+-- specType'(depth, x): specType x at an explicit depth.
 specType' = method(TypicalValue => SpecNet)
--- speek x: the structure x is drawn as, two levels deep, read without the
--- shell: speek(1/2) is QQ => {ZZ => 1, ZZ => 2}.
-speek = method(Dispatch => Thing)
+-- speek x: the drawing of x one level deep, as peek shows an object:
+-- speek(1/2) is Fraction{Atom{"1", ZZ}, Atom{"2", ZZ}}.
+speek = method(Dispatch => Thing, TypicalValue => String)
 -- speek'(depth, x): speek x to an explicit depth.
-speek' = method()
+speek' = method(TypicalValue => String)
+-- formatted e: an expression laid out as its class lays it out, before it is
+-- marked with that class.
+formatted = method(Dispatch => Thing, TypicalValue => SpecNet)
+
+-- The shapes a drawing is built from, one constructor each.
+-- atom(text, class): text coloured as `class` is, a type or the name of a
+-- colour such as "Operator": atom("+", "Operator").
+atom = method(TypicalValue => SpecNet)
+-- row items: the drawings set side by side.
+row = method(TypicalValue => SpecNet)
+-- joined(items, separator, class): the drawings with an atom of `separator`
+-- between each two: joined({x, y}, ", ", "Delimiter") reads x, y.
+joined = method(TypicalValue => SpecNet)
+-- listed(items, left, right): the values drawn, joined by commas and fenced:
+-- listed({1, 2}, "{", "}") reads {1, 2}.
+listed = method(TypicalValue => SpecNet)
+-- script(base, sub, sup): base with a subscript, a superscript or both, the
+-- one absent null: script(x, 2, 2) reads x_2^2.
+script = method(TypicalValue => SpecNet)
+-- fraction(numerator, denominator) extends Core's fraction to drawings.
+-- fence(left, right, body): the body between a pair of delimiters.
+fence = method(TypicalValue => SpecNet)
+-- parenthesized body: the body in parentheses.
+parenthesized = method(TypicalValue => SpecNet)
+-- grid(rows, align): rows of cells, a list of lists of drawings, aligned as
+-- "Matrix", "Bare", "LeftAligned" or "Aligned" (see Spectral/SpecNet.m2).
+grid = method(TypicalValue => SpecNet)
+-- labelled(shape, base, label): the label "Over" or "Under" the base.
+labelled = method(TypicalValue => SpecNet)
+-- drawsAs(drawn, type): whether a drawing is laid out as `type` or a class
+-- derived from it: drawsAs(specNet(x + 1), Sum) is true.
+drawsAs = method(TypicalValue => Boolean)
 
 -- The drawing's own machinery, used by the methods of every class.
--- opaque x: x as a leaf with no parts, spelled by its text (see spelling).
+-- parts drawn extends Core's parts to drawings: the drawings a node is built
+-- from, in the order they are read.
+-- nested value: the drawings in a field's value, a drawing or lists of them.
+nested = method(Dispatch => Thing, TypicalValue => List)
+-- changedIn(value, change): a field's value with each drawing in it changed.
+changedIn = method()
+-- partsChanged(drawn, change): the drawing with each part passed through
+-- change(field, part), `field` naming where the part sits.
+partsChanged = method(TypicalValue => SpecNet)
+-- transmitted drawn: the drawing as the shell is sent it, its classes gathered
+-- in one table that atoms and highlights point into.
+transmitted = method(TypicalValue => SpecNet)
+-- opaque x: x as an atom of its own class, spelled by its text (see spelling).
 -- Used for values whose expression holds nothing but themselves.
 opaque = method(Dispatch => Thing, TypicalValue => SpecNet)
--- spelling x: the text an opaque leaf of x shows, toString x by default.
+-- spelling x: the text an opaque atom of x shows, toString x by default.
 spelling = method(Dispatch => Thing, TypicalValue => String)
--- valueClass drawn: the class a drawing stands for, its value's Type, or for a
--- part that is only part of an expression, its expression class.
-valueClass = method()
--- contentsOf(container, items): a container drawn as `items`, each at the
+-- contentsOf(container, draw): a container drawn by the function `draw`, at the
 -- container's own depth; a container already being drawn, which holds itself,
 -- is drawn opaque rather than endlessly.
 contentsOf = method(TypicalValue => SpecNet)
@@ -76,7 +131,7 @@ contentsOf = method(TypicalValue => SpecNet)
 -- drawn as themselves at the next depth. An unnamed x with a placeholder costs
 -- one level, and past the value depth is drawn as the placeholder alone.
 unfolding = method(TypicalValue => SpecNet)
--- typesetMarked(drawn, forced): the drawing with every part marked whether it
+-- typesetMarked(drawn, forced): the drawing with every atom marked whether it
 -- is typeset maths, by the typeset, typesetOperands and typewriter settings;
 -- `forced` when a typeset value holds the drawing.
 typesetMarked = method(TypicalValue => SpecNet)
@@ -86,6 +141,15 @@ nearestSetting = method(TypicalValue => Boolean)
 -- configuredDepth(depth, x): the integer setting `depth` (typeDepth or
 -- valueDepth) of the nearest ancestor of x's class that sets it.
 configuredDepth = method()
+-- operand(part, loose): an operand drawn, parenthesized when it is laid out as
+-- one of the classes in `loose`.
+operand = method(TypicalValue => SpecNet)
+-- stacked rows: rows of drawings one under another, left-aligned in braces, as
+-- a vertical list and a hash table are drawn.
+stacked = method(TypicalValue => SpecNet)
+-- arranged(e, straight): the diagram of a ComplexMapExpression e, its target
+-- under its source by degree, or shifted under the components when straight.
+arranged = method(TypicalValue => SpecNet)
 
 -- Hooks a class's block installs to say how its values are drawn.
 -- placeholder x: the conventional name an unnamed x keeps past the value depth
