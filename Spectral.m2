@@ -118,6 +118,9 @@ partsChanged = method(TypicalValue => Rod)
 -- transmitted drawn: the drawing as the shell is sent it, its classes gathered
 -- in one table that atoms and highlights point into.
 transmitted = method(TypicalValue => Rod)
+-- tabulated table: the pairs of a hash table stacked between braces, keys,
+-- arrows and values aligned.
+tabulated = method(Dispatch => Thing, TypicalValue => Rod)
 -- opaque x: x as an atom of its own class, spelled by its text (see spelling).
 -- Used for values whose expression holds nothing but themselves.
 opaque = method(Dispatch => Thing, TypicalValue => Rod)
@@ -166,6 +169,14 @@ spelledShape = method()
 optionKey = method(Dispatch => Thing, TypicalValue => Rod)
 
 -- Links: what a source position or a documentation page points to.
+-- named x: whether x is the value of the global name it spells: sin is, an
+-- anonymous x -> x is not.
+named = method(Dispatch => Thing, TypicalValue => Boolean)
+-- sourceLines position: the lines of code at a source position, as code shows
+-- them; null when they are nowhere to be read.
+sourceLines = method(Dispatch => Thing)
+-- lined(lines, class): the lines one under another, each an atom of `class`.
+lined = method(TypicalValue => Rod)
 -- sourceTarget position: the file:// URL of a FilePosition, its file found on
 -- the load path; null when the file cannot be found.
 sourceTarget = method(Dispatch => Thing)
