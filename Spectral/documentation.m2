@@ -6,7 +6,7 @@ Node
     structured value and type formatting
   Description
     Text
-      @TO specNet@ lays a value out as a tree of shapes, as TeX lays out a
+      @TO rod@ lays a value out as a tree of shapes, as TeX lays out a
       formula, each atom coloured by its class. @TO specType@ lays out the type
       of a value the same way. Both are what the
       @HREF{"https://github.com/AlexanderGolys/spectral-m2", "spectral-m2"}@
@@ -15,8 +15,8 @@ Node
     Example
       speek(1/2)
   Subnodes
-    SpecNet
-    specNet
+    Rod
+    rod
     atom
     Highlight
     specType
@@ -36,7 +36,7 @@ Node
       The last cell takes the rest of the width: when it is too long it wraps,
       continuing beneath where it started rather than at the left margin.
       A hash table draws its pairs this way, each key and its arrow in aligned
-      columns; install @TO specNet@ for a type to draw it the same way.
+      columns; install @TO rod@ for a type to draw it the same way.
     Example
       AlignedExpression{{"x", symbol =>, 1}, {"longer", symbol =>, {1, 2, 3}}}
 Node
@@ -52,12 +52,12 @@ Node
       Complexes compose this with @TO MapExpression@ to show module degrees.
 Node
   Key
-    SpecNet
+    Rod
   Headline
     a value laid out as a tree of shapes
   Description
     Text
-      A SpecNet is one node of a layout, its parts in fields named by its
+      A Rod is one node of a layout, its parts in fields named by its
       shape: an Atom of text in the colour of its class, a Row or a Join of
       items, a Script, a Fraction, a Fence, a Grid, a label Over or Under a
       base, a Diagram of pieces joined by arrows, or a Tree. Each shape has a
@@ -70,15 +70,15 @@ Node
       speek'(2, (x + 1)/2)
 Node
   Key
-    specNet
-    (specNet, Thing)
-    specNet'
-    (specNet', ZZ, Thing)
+    rod
+    (rod, Thing)
+    rod'
+    (rod', ZZ, Thing)
   Headline
     lay a value out as a tree of shapes
   Usage
-    specNet x
-    specNet'(depth, x)
+    rod x
+    rod'(depth, x)
   Description
     Text
       The default method unfolds @TO expression@ until an expression holds
@@ -87,11 +87,11 @@ Node
       by @TO formatted@, a sum between plus signs, a power as a script, a
       matrix as a grid. Install @TO expression@ for a new type to compose
       existing expression shapes, @TO formatted@ for an expression class to lay
-      it out differently, or specNet for a type to draw it from the shapes
+      it out differently, or rod for a type to draw it from the shapes
       under @TO atom@ directly.
     Example
       R = QQ[x, y];
-      formatted Sum := s -> joined(apply(toList s, specNet), " (+) ", "Operator");
+      formatted Sum := s -> joined(apply(toList s, rod), " (+) ", "Operator");
       speek'(2, x + y)
 Node
   Key
@@ -103,7 +103,7 @@ Node
     formatted e
   Description
     Text
-      The layout of an expression of e's class, which @TO specNet@ marks with
+      The layout of an expression of e's class, which @TO rod@ marks with
       that class. A class without a layout of its own is spelled by its name
       over its parts.
 Node
@@ -124,7 +124,7 @@ Node
       two complexes the same way, but its matrices wait one level longer than
       their modules, so at its default depth of 2 its arrows carry names, and
       ComplexMap.valueDepth = 3 shows the matrices.
-      Thing.valueDepth is 1 and Complex.valueDepth is 2. Explicit specNet'
+      Thing.valueDepth is 1 and Complex.valueDepth is 2. Explicit rod'
       calls use their supplied depth.
 Node
   Key
@@ -211,20 +211,20 @@ Node
     listed
     (listed, List, String, String)
     script
-    (script, SpecNet, Thing, Thing)
-    (fraction, SpecNet, SpecNet)
+    (script, Rod, Thing, Thing)
+    (fraction, Rod, Rod)
     fence
-    (fence, String, String, SpecNet)
+    (fence, String, String, Rod)
     parenthesized
-    (parenthesized, SpecNet)
+    (parenthesized, Rod)
     grid
     (grid, List, String)
     labelled
-    (labelled, String, SpecNet, SpecNet)
+    (labelled, String, Rod, Rod)
     drawsAs
-    (drawsAs, SpecNet, Type)
+    (drawsAs, Rod, Type)
   Headline
-    the shapes a SpecNet is built from
+    the shapes a Rod is built from
   Usage
     atom(text, class)
     row items
@@ -250,8 +250,8 @@ Node
       whether a drawing is laid out as an expression class.
     Example
       R = QQ[x, y];
-      speek'(2, script(atom("x", Symbol), specNet 1, specNet 2))
-      drawsAs(specNet(x + 1), Sum)
+      speek'(2, script(atom("x", Symbol), rod 1, rod 2))
+      drawsAs(rod(x + 1), Sum)
 Node
   Key
     Highlight
@@ -259,7 +259,7 @@ Node
     Target
     Tex
   Headline
-    what any node of a SpecNet may carry
+    what any node of a Rod may carry
   Description
     Text
       Highlight is a class the node and its parts are coloured as, in place of
@@ -268,6 +268,6 @@ Node
       an atom that has its own.
     Example
       R = QQ[x, y];
-      specNet Ideal := I -> (lookup(specNet, Thing)) I ++ {Highlight => Keyword, Reach => 1};
+      rod Ideal := I -> (lookup(rod, Thing)) I ++ {Highlight => Keyword, Reach => 1};
       speek ideal(x, y)
 ///

@@ -2,7 +2,7 @@
 -- All of it is typeset maths.
 
 Number.typeset = true
-specNet InexactNumber := opaque
+rod InexactNumber := opaque
 
 RingElement.typeset = true
 
@@ -19,13 +19,13 @@ opaque RingFamily := lookup(opaque, Ring)
 opaque ScriptedFunctor := lookup(opaque, Ring)
 
 -- A ring is over what it is built from.
-parameters QuotientRing := x -> {ambient x}
-parameters PolynomialRing := x -> {coefficientRing x}
+parameters QuotientRing := List => x -> {ambient x}
+parameters PolynomialRing := List => x -> {coefficientRing x}
 
 Ideal.typeset = true
 Ideal.typedByParameters = true
 placeholder Ideal := String => x -> "I"
-parameters Ideal := x -> {ring x}
+parameters Ideal := List => x -> {ring x}
 
 -- A module is over its ring. Its rank is an index on it, as in R^2, rather than
 -- a power, and M2 spells rank one as an explicit `^1` that its type already
@@ -34,7 +34,7 @@ Module.typeset = true
 Module.typeDepth = 2
 Module.typedByParameters = true
 placeholder Module := String => x -> "M"
-parameters Module := x -> {ring x}
+parameters Module := List => x -> {ring x}
 spelledShape (Module, Expression) := (x, shape) -> (
 	if instance(shape, Superscript) and instance(shape#1, OneExpression) then
 		shape#0
@@ -48,6 +48,6 @@ spelledShape (Module, Expression) := (x, shape) -> (
 Matrix.typeset = true
 Matrix.typeDepth = 3
 Matrix.typedByParameters = true
-parameters Matrix := f -> {MapExpression {f.target, f.source}}
+parameters Matrix := List => f -> {MapExpression {f.target, f.source}}
 
 RingMap.typeset = true

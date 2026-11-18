@@ -2,8 +2,8 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "0.1",
-	Date => "November 14, 2026",
+	Version => "0.2.0",
+	Date => "November 18, 2026",
 	Headline => "drawing values as structured, typed trees",
 	PackageImports => {"Complexes", "Varieties", "Text"},
 	Authors => {{
@@ -18,9 +18,9 @@ newPackage(
 )
 
 export {
-	"SpecNet",
-	"specNet",
-	"specNet'",
+	"Rod",
+	"rod",
+	"rod'",
 	"specType",
 	"specType'",
 	"speek",
@@ -50,23 +50,23 @@ export {
 }
 
 -- A drawing: one shaped node of a tree laid out as TeX lays out a formula, its
--- parts in named fields; Spectral/SpecNet.m2 lists the shapes.
+-- parts in named fields; Spectral/Rod.m2 lists the shapes.
 -- 1/2 is Fraction{Atom{"1", ZZ}, Atom{"2", ZZ}}.
-SpecNet = new Type of HashTable
+Rod = new Type of HashTable
 
--- The public drawing, what the shell shows a value as. Install specNet for a
+-- The public drawing, what the shell shows a value as. Install rod for a
 -- class to draw its values differently, or formatted for an expression class to
 -- lay its expressions out differently.
--- specNet x: x drawn from its expression, each part laid out by its class.
-specNet = method(Dispatch => Thing, TypicalValue => SpecNet)
--- specNet'(depth, x): specNet x unfolding `depth` unnamed values deep, in
+-- rod x: x drawn from its expression, each part laid out by its class.
+rod = method(Dispatch => Thing, TypicalValue => Rod)
+-- rod'(depth, x): rod x unfolding `depth` unnamed values deep, in
 -- place of x's class's valueDepth.
-specNet' = method(TypicalValue => SpecNet)
+rod' = method(TypicalValue => Rod)
 -- specType x: the type annotation shown beside x, as detailed as its class's
 -- typeDepth: 1/2 is QQ, and R^2, a module of typeDepth 2, is Module[R].
-specType = method(Dispatch => Thing, TypicalValue => SpecNet)
+specType = method(Dispatch => Thing, TypicalValue => Rod)
 -- specType'(depth, x): specType x at an explicit depth.
-specType' = method(TypicalValue => SpecNet)
+specType' = method(TypicalValue => Rod)
 -- speek x: the drawing of x one level deep, as peek shows an object:
 -- speek(1/2) is Fraction{Atom{"1", ZZ}, Atom{"2", ZZ}}.
 speek = method(Dispatch => Thing, TypicalValue => String)
@@ -74,35 +74,35 @@ speek = method(Dispatch => Thing, TypicalValue => String)
 speek' = method(TypicalValue => String)
 -- formatted e: an expression laid out as its class lays it out, before it is
 -- marked with that class.
-formatted = method(Dispatch => Thing, TypicalValue => SpecNet)
+formatted = method(Dispatch => Thing, TypicalValue => Rod)
 
 -- The shapes a drawing is built from, one constructor each.
 -- atom(text, class): text coloured as `class` is, a type or the name of a
 -- colour such as "Operator": atom("+", "Operator").
-atom = method(TypicalValue => SpecNet)
+atom = method(TypicalValue => Rod)
 -- row items: the drawings set side by side.
-row = method(TypicalValue => SpecNet)
+row = method(TypicalValue => Rod)
 -- joined(items, separator, class): the drawings with an atom of `separator`
 -- between each two: joined({x, y}, ", ", "Delimiter") reads x, y.
-joined = method(TypicalValue => SpecNet)
+joined = method(TypicalValue => Rod)
 -- listed(items, left, right): the values drawn, joined by commas and fenced:
 -- listed({1, 2}, "{", "}") reads {1, 2}.
-listed = method(TypicalValue => SpecNet)
+listed = method(TypicalValue => Rod)
 -- script(base, sub, sup): base with a subscript, a superscript or both, the
 -- one absent null: script(x, 2, 2) reads x_2^2.
-script = method(TypicalValue => SpecNet)
+script = method(TypicalValue => Rod)
 -- fraction(numerator, denominator) extends Core's fraction to drawings.
 -- fence(left, right, body): the body between a pair of delimiters.
-fence = method(TypicalValue => SpecNet)
+fence = method(TypicalValue => Rod)
 -- parenthesized body: the body in parentheses.
-parenthesized = method(TypicalValue => SpecNet)
+parenthesized = method(TypicalValue => Rod)
 -- grid(rows, align): rows of cells, a list of lists of drawings, aligned as
--- "Matrix", "Bare", "LeftAligned" or "Aligned" (see Spectral/SpecNet.m2).
-grid = method(TypicalValue => SpecNet)
+-- "Matrix", "Bare", "LeftAligned" or "Aligned" (see Spectral/Rod.m2).
+grid = method(TypicalValue => Rod)
 -- labelled(shape, base, label): the label "Over" or "Under" the base.
-labelled = method(TypicalValue => SpecNet)
+labelled = method(TypicalValue => Rod)
 -- drawsAs(drawn, type): whether a drawing is laid out as `type` or a class
--- derived from it: drawsAs(specNet(x + 1), Sum) is true.
+-- derived from it: drawsAs(rod(x + 1), Sum) is true.
 drawsAs = method(TypicalValue => Boolean)
 
 -- The drawing's own machinery, used by the methods of every class.
@@ -114,27 +114,27 @@ nested = method(Dispatch => Thing, TypicalValue => List)
 changedIn = method()
 -- partsChanged(drawn, change): the drawing with each part passed through
 -- change(field, part), `field` naming where the part sits.
-partsChanged = method(TypicalValue => SpecNet)
+partsChanged = method(TypicalValue => Rod)
 -- transmitted drawn: the drawing as the shell is sent it, its classes gathered
 -- in one table that atoms and highlights point into.
-transmitted = method(TypicalValue => SpecNet)
+transmitted = method(TypicalValue => Rod)
 -- opaque x: x as an atom of its own class, spelled by its text (see spelling).
 -- Used for values whose expression holds nothing but themselves.
-opaque = method(Dispatch => Thing, TypicalValue => SpecNet)
+opaque = method(Dispatch => Thing, TypicalValue => Rod)
 -- spelling x: the text an opaque atom of x shows, toString x by default.
 spelling = method(Dispatch => Thing, TypicalValue => String)
 -- contentsOf(container, draw): a container drawn by the function `draw`, at the
 -- container's own depth; a container already being drawn, which holds itself,
 -- is drawn opaque rather than endlessly.
-contentsOf = method(TypicalValue => SpecNet)
+contentsOf = method(TypicalValue => Rod)
 -- unfolding(x, shape): x drawn from its expression `shape`, its parameters
 -- drawn as themselves at the next depth. An unnamed x with a placeholder costs
 -- one level, and past the value depth is drawn as the placeholder alone.
-unfolding = method(TypicalValue => SpecNet)
+unfolding = method(TypicalValue => Rod)
 -- typesetMarked(drawn, forced): the drawing with every atom marked whether it
 -- is typeset maths, by the typeset, typesetOperands and typewriter settings;
 -- `forced` when a typeset value holds the drawing.
-typesetMarked = method(TypicalValue => SpecNet)
+typesetMarked = method(TypicalValue => Rod)
 -- nearestSetting(field, type): the Boolean setting `field` (typeset, …) of the
 -- nearest ancestor of `type` that sets it; false given anything but a type.
 nearestSetting = method(TypicalValue => Boolean)
@@ -143,13 +143,13 @@ nearestSetting = method(TypicalValue => Boolean)
 configuredDepth = method()
 -- operand(part, loose): an operand drawn, parenthesized when it is laid out as
 -- one of the classes in `loose`.
-operand = method(TypicalValue => SpecNet)
+operand = method(TypicalValue => Rod)
 -- stacked rows: rows of drawings one under another, left-aligned in braces, as
 -- a vertical list and a hash table are drawn.
-stacked = method(TypicalValue => SpecNet)
+stacked = method(TypicalValue => Rod)
 -- arranged(e, straight): the diagram of a ComplexMapExpression e, its target
 -- under its source by degree, or shifted under the components when straight.
-arranged = method(TypicalValue => SpecNet)
+arranged = method(TypicalValue => Rod)
 
 -- Hooks a class's block installs to say how its values are drawn.
 -- placeholder x: the conventional name an unnamed x keeps past the value depth
@@ -163,7 +163,7 @@ parameters = method(Dispatch => Thing, TypicalValue => List)
 spelledShape = method()
 -- optionKey key: the key before `=>`, coloured as an option's name when it is
 -- spelled by a symbol or a string.
-optionKey = method(Dispatch => Thing, TypicalValue => SpecNet)
+optionKey = method(Dispatch => Thing, TypicalValue => Rod)
 
 -- Links: what a source position or a documentation page points to.
 -- sourceTarget position: the file:// URL of a FilePosition, its file found on
@@ -180,7 +180,7 @@ attributeText = method()
 
 -- How a value is drawn, class by class: each class's settings and methods stand
 -- together in one block, in the file of its subject.
-load "./Spectral/SpecNet.m2"
+load "./Spectral/Rod.m2"
 load "./Spectral/expressions.m2"
 load "./Spectral/containers.m2"
 load "./Spectral/language.m2"

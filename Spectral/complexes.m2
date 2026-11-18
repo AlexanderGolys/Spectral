@@ -7,9 +7,9 @@ Complex.valueDepth = 2
 Complex.typedByParameters = true
 placeholder Complex := String => x -> "C"
 parameters Complex := x -> {ring x}
-specNet Complex := complex -> (
+rod Complex := complex -> (
 	if complex == 0 then
-		return specNet 0;
+		return rod 0;
 	(lo, hi) := concentration complex;
 	module := degree -> Intermediate {
 		Subscript {symbol C, degree},
@@ -64,28 +64,28 @@ arranged (ComplexMapExpression, Boolean) := (shape, straight) -> (
 	lowest := min flatten apply(2, k -> apply(degrees {source, target}#k, degree ->
 			degree - offsets#k));
 	column := (degree, offset) -> degree - offset - lowest + 1;
-	zero := specNet 0;
+	zero := rod 0;
 	-- Each complex as its pieces and its arrows.
 	drawn := apply(2, k -> (
 		chain := {source, target}#k;
 		at := degree -> {rows#k, column(degree, offsets#k)};
 		(first', last') := (min degrees chain, max degrees chain);
 		{{{at(first' - 1), zero}, {at(last' + 1), zero}} | apply(chain, entry ->
-				{at entry#0, specNet entry#1}),
+				{at entry#0, rod entry#1}),
 			{{at first', at(first' - 1), null}, {at(last' + 1), at last', null}}
 				| apply(select(chain, entry -> #entry > 2), entry ->
-						{at entry#0, at(entry#0 - 1), specNet entry#2})}
+						{at entry#0, at(entry#0 - 1), rod entry#2})}
 	));
-	new SpecNet from {
+	new Rod from {
 		Shape => "Diagram",
 		Pieces => flatten apply(drawn, first) | flatten apply(numbered, (row,
 			offset, numbers) ->
 				apply(toList(min numbers .. max numbers), degree ->
-						{{row, column(degree, offset)}, specNet degree})),
+						{{row, column(degree, offset)}, rod degree})),
 		Arrows => flatten apply(drawn, last) | apply(components, component -> {
 			{rows#0, column(component#0, offsets#0)},
 			{rows#1, column(component#0 + shift, offsets#1)},
-			specNet component#1
+			rod component#1
 		})
 	}
 )
@@ -98,7 +98,7 @@ arranged (ComplexMapExpression, Boolean) := (shape, straight) -> (
 ComplexMap.typeset = true
 ComplexMap.valueDepth = 2
 placeholder ComplexMap := String => x -> "f"
-specNet ComplexMap := map -> (
+rod ComplexMap := map -> (
 	matrixPart := (name, degree, matrix) -> Intermediate {
 		Subscript {name, degree}, matrix,
 		new Array from {Table entries matrix}, 2

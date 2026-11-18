@@ -73,7 +73,7 @@ sourcesLinked String := page -> (
 	linked | page
 )
 
-specNet Hypertext := page -> opaque page ++ {
+rod Hypertext := page -> opaque page ++ {
 	symbol Text => toString net page,
 	Html => sourcesLinked pathsShortened keysLinked(html page, page),
 	TypeNames => unique flatten apply(dictionaryPath, dictionary ->

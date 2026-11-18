@@ -12,10 +12,10 @@ Nothing.typewriter = true
 opaque Symbol := name -> (lookup(opaque, Thing)) name ++ {symbol Type => class value name}
 
 -- An indexed variable x_1 is drawn as the subscript it is spelled with.
-specNet IndexedVariable := variable -> specNet new Subscript from toList variable
+rod IndexedVariable := variable -> rod new Subscript from toList variable
 
 -- An operator keyword is coloured as an operator; any other as a keyword.
-specNet Keyword := keyword -> opaque keyword ++ {
+rod Keyword := keyword -> opaque keyword ++ {
 	Highlight => if operatorAttributes#?keyword then
 			"Operator"
 		else Keyword
@@ -23,7 +23,7 @@ specNet Keyword := keyword -> opaque keyword ++ {
 
 -- A function links to its source.
 Function.typewriter = true
-specNet Function := function -> opaque function ++ {
+rod Function := function -> opaque function ++ {
 	Target => (position := locate function;
 		if position =!= null then
 			sourceTarget position)
@@ -59,7 +59,7 @@ spelling FilePosition := position -> concatenate(
 	if #position > 3 then
 		("-", toString position#3, ":", toString position#4) else ""
 )
-specNet FilePosition := position -> opaque position ++ {
+rod FilePosition := position -> opaque position ++ {
 	symbol Text => spelling position,
 	Target => sourceTarget position
 }

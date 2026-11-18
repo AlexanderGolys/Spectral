@@ -1,7 +1,7 @@
--- The drawing itself: what a SpecNet is, the shapes it is built from, how a value
+-- The drawing itself: what a Rod is, the shapes it is built from, how a value
 -- unfolds into one, and what every class draws as until its own block says otherwise.
 
--- A SpecNet is one shaped node with its parts in named fields, as a formula in
+-- A Rod is one shaped node with its parts in named fields, as a formula in
 -- TeX is a tree of such constructs:
 --   Atom      Text drawn as its Class, maybe with its own Tex: a name, a number, a sign
 --   Row       Items set side by side; a line too long may break between them
@@ -19,81 +19,81 @@
 -- Any node may carry a Highlight, the class it and its parts are coloured as
 -- in place of their own, reaching Reach levels below it (all of them when
 -- unset), and a Target it links to:
---   specNet Ideal := I -> (lookup(specNet, Thing)) I ++ {Highlight => Keyword} While drawn, a node also keeps the Class it is drawn as and the
+--   rod Ideal := I -> (lookup(rod, Thing)) I ++ {Highlight => Keyword} While drawn, a node also keeps the Class it is drawn as and the
 -- Type of the value it stands for, which decide what is typeset.
 -- 1/2 is Fraction{Atom{"1", ZZ}, Atom{"2", ZZ}}.
-new SpecNet from List := (SpecNet, fields) -> hashTable fields
-SpecNet ++ List := SpecNet => (node, fields) -> new SpecNet from merge(node,
+new Rod from List := (Rod, fields) -> hashTable fields
+Rod ++ List := Rod => (node, fields) -> new Rod from merge(node,
 	hashTable fields, last@@splice)
-specNet SpecNet := identity
-net SpecNet := net@@speek
+rod Rod := identity
+net Rod := net@@speek
 
-atom (String, Thing) := (text, class') -> new SpecNet from {
+atom (String, Thing) := (text, class') -> new Rod from {
 	Shape => "Atom",
 	symbol Text => text,
 	Class => class'
 }
-row List := items -> new SpecNet from {
+row List := items -> new Rod from {
 	Shape => "Row",
 	Items => items
 }
-joined (List, String, Thing) := (items, separator, class') -> new SpecNet from {
+joined (List, String, Thing) := (items, separator, class') -> new Rod from {
 	Shape => "Join",
 	Items => items,
 	Separator => atom(separator, class')
 }
 listed (List, String, String) := (items, left, right) -> fence(left, right,
-	joined(apply(items, specNet), ", ", "Delimiter"))
-script (SpecNet, Thing, Thing) := (base, sub, sup) -> new SpecNet from {
+	joined(apply(items, rod), ", ", "Delimiter"))
+script (Rod, Thing, Thing) := (base, sub, sup) -> new Rod from {
 	Shape => "Script",
 	Base => base,
 	Sub => sub,
 	Sup => sup
 }
-fraction (SpecNet, SpecNet) := (numerator, denominator) -> new SpecNet from {
+fraction (Rod, Rod) := (numerator, denominator) -> new Rod from {
 	Shape => "Fraction",
 	Numerator => numerator,
 	Denominator => denominator
 }
-fence (String, String, SpecNet) := (left, right, body) -> new SpecNet from {
+fence (String, String, Rod) := (left, right, body) -> new Rod from {
 	Shape => "Fence",
 	Left => left,
 	Right => right,
 	Body => body
 }
-parenthesized SpecNet := body -> fence("(", ")", body)
-grid (List, String) := (rows, align) -> new SpecNet from {
+parenthesized Rod := body -> fence("(", ")", body)
+grid (List, String) := (rows, align) -> new Rod from {
 	Shape => "Grid",
 	Rows => rows,
 	Align => align
 }
-labelled (String, SpecNet, SpecNet) := (shape, base, label) -> new SpecNet from {
+labelled (String, Rod, Rod) := (shape, base, label) -> new Rod from {
 	Shape => shape,
 	Base => base,
 	Label => label
 }
 
 -- Whether a node is drawn as `type`, or as something derived from it.
-drawsAs (SpecNet, Type) := (node, type) -> (node#?Class
+drawsAs (Rod, Type) := (node, type) -> (node#?Class
 		and instance(node.Class, Type) and ancestor(type, node.Class))
 
 -- The fields holding a node's parts, in the order the parts are read.
 partFields := {Items, Separator, Base, Sub, Sup, Numerator, Denominator, Label,
 	Body, Rows, Degrees, Pieces, Arrows, Straight, Branches}
--- The parts a node is drawn from: every SpecNet in its part fields.
-parts SpecNet := node -> flatten apply(select(partFields, field -> node#?field),
+-- The parts a node is drawn from: every Rod in its part fields.
+parts Rod := node -> flatten apply(select(partFields, field -> node#?field),
 	field -> nested node#field)
 nested Thing := value -> {}
-nested SpecNet := node -> {node}
+nested Rod := node -> {node}
 nested VisibleList := items -> flatten apply(toList items, nested)
 
--- The value with every SpecNet in it passed through `change`.
+-- The value with every Rod in it passed through `change`.
 changedIn (Thing, Function) := (value, change) -> value
-changedIn (SpecNet, Function) := (node, change) -> change node
+changedIn (Rod, Function) := (node, change) -> change node
 changedIn (VisibleList, Function) := (items, change) -> apply(items,
 	item -> changedIn(item, change))
 -- The node with each part passed through `change(field, part)`.
-partsChanged (SpecNet, Function) := (node, change) -> new SpecNet from applyPairs(node,
+partsChanged (Rod, Function) := (node, change) -> new Rod from applyPairs(node,
 	(field, value) -> (field, changedIn(value, part -> change(field, part))))
 
 -- The nearest setting of `field` in the ancestry of `type`.
@@ -118,7 +118,7 @@ configuredDepth (Symbol, Thing) := (depth, x) -> (
 -- operator, unless its class keeps a typewriter face. The script of a subscript
 -- or superscript keeps its own setting; a node built only to lay out its parts
 -- passes on what it was given.
-typesetMarked (SpecNet, Boolean) := (node, forced) -> (
+typesetMarked (Rod, Boolean) := (node, forced) -> (
 	if not (node#?Class or node#?symbol Type) then
 		return partsChanged(node, (field, part) -> typesetMarked(part, forced));
 	classes := apply({Class, symbol Type}, field -> if node#?field then
@@ -163,7 +163,7 @@ contentsOf (Thing, Function) := (container, draw) -> (
 -- Draw x from `shape`, its expression with each parameter spelled in place
 -- given back as the parameter itself, so that it is drawn at the next depth.
 unfolding (Thing, Thing) := (x, shape) -> (
-	unfoldable ?? return specNet'(configuredDepth(symbol valueDepth, x), x);
+	unfoldable ?? return rod'(configuredDepth(symbol valueDepth, x), x);
 	name := placeholder x;
 	if name =!= null and unfoldable <= 0 then
 		return atom(name, Symbol) ++ {symbol Type => class x};
@@ -178,16 +178,16 @@ unfolding (Thing, Thing) := (x, shape) -> (
 	), shape, parameters x);
 	if name =!= null then
 		unfoldable -= 1;
-	result := specNet held ++ {symbol Type => class x};
+	result := rod held ++ {symbol Type => class x};
 	if name =!= null then
 		unfoldable += 1;
 	result
 )
 
-specNet' (ZZ, Thing) := (depth, x) -> (
+rod' (ZZ, Thing) := (depth, x) -> (
 	outer := unfoldable;
 	unfoldable = depth;
-	result := specNet x;
+	result := rod x;
 	unfoldable = outer;
 	result
 )
@@ -196,14 +196,14 @@ specNet' (ZZ, Thing) := (depth, x) -> (
 -- {name, part, shape, level}: spelled by its name until the drawing has that
 -- many levels left to unfold (one by default), then drawn from its shape.
 Intermediate = new HeaderType of Expression
-specNet Intermediate := part -> (
+rod Intermediate := part -> (
 	(name, component, shape) := toSequence take(part, 3);
 	level := if #part > 3 then
 			part#3
 		else 1;
 	if unfoldable =!= null and unfoldable < level then
-		specNet name ++ {symbol Type => class component}
-	else specNet shape ++ {symbol Type => class component}
+		rod name ++ {symbol Type => class component}
+	else rod shape ++ {symbol Type => class component}
 )
 
 -- Thing: what every class draws as until its own block says otherwise.
@@ -234,12 +234,12 @@ spelledShape (Thing, Thing) := (x, shape) -> shape
 -- Values whose expression holds nothing but themselves.
 opaque Thing := x -> atom(spelling x, class x) ++ {symbol Type => class x}
 spelling Thing := x -> try toString x else toString class x
-specNet Thing := x -> (
+rod Thing := x -> (
 	shape := expression x;
 	if instance(shape, Holder) and shape#0 === x then
 		opaque x
 	else if instance(shape, Holder) and instance(shape#0, Symbol) then
-		specNet shape#0
+		rod shape#0
 	else unfolding(x, spelledShape(x, shape))
 )
 specType Thing := x -> specType'(configuredDepth(symbol typeDepth, x), x)
@@ -248,22 +248,22 @@ specType Thing := x -> specType'(configuredDepth(symbol typeDepth, x), x)
 specType' (ZZ, Thing) := (depth, x) -> (
 	shape := expression x;
 	inner := if depth <= 1 then
-			return specNet class x
+			return rod class x
 		else if nearestSetting(symbol typedByParameters, class x) then
-		apply(parameters x, parameter -> specNet'(depth - 2, parameter))
+		apply(parameters x, parameter -> rod'(depth - 2, parameter))
 	else if instance(shape, Expression) and not instance(shape, Holder) then
 		apply(toList shape, part -> specType'(depth - 1,
 			if instance(part, Holder) then
 				part#0
 			else part))
-	else return specNet class x;
-	row {specNet class x, fence("[", "]", joined(inner, ", ", "Delimiter"))}
+	else return rod class x;
+	row {rod class x, fence("[", "]", joined(inner, ", ", "Delimiter"))}
 )
 
--- speek x: the SpecNet x is drawn as, one level deep, as peek shows an object;
+-- speek x: the Rod x is drawn as, one level deep, as peek shows an object;
 -- speek'(depth, x) shows it `depth` levels deep.
-speek' (ZZ, Thing) := (depth, x) -> speek'(depth, specNet x)
-speek' (ZZ, SpecNet) := (depth, node) -> (
+speek' (ZZ, Thing) := (depth, x) -> speek'(depth, rod x)
+speek' (ZZ, Rod) := (depth, node) -> (
 	if node.Shape === "Atom" then
 		"Atom{" | format node.Text | ", " | toString node.Class | "}"
 	else if depth <= 0 then
@@ -273,17 +273,17 @@ speek' (ZZ, SpecNet) := (depth, node) -> (
 )
 speek Thing := x -> speek'(1, x)
 
--- What the shell is sent for a value or its type: the SpecNet with each class
+-- What the shell is sent for a value or its type: the Rod with each class
 -- it is drawn as sent once, in its Classes table, which every atom's Class and
 -- every Highlight point into. What only decides the drawing stays behind.
-transmitted SpecNet := node -> (
+transmitted Rod := node -> (
 	classes := new MutableHashTable;
 	index := class' -> (
 		if not classes#?class' then
 			classes#class' = #classes;
 		classes#class'
 	);
-	sent := node -> new SpecNet from join(
+	sent := node -> new Rod from join(
 		select(pairs partsChanged(node, (field, part) -> sent part), (field, value) ->
 				not member(field, {Class, symbol Type, Highlight})),
 		if node.Shape === "Atom" then {Class => index node.Class} else {},
@@ -295,7 +295,7 @@ transmitted SpecNet := node -> (
 				class'
 			else {class'})}
 )
-drawnAs = x -> transmitted(try typesetMarked(specNet x, false)
+drawnAs = x -> transmitted(try typesetMarked(rod x, false)
 		else opaque x) ++ {
 			Fallback => (try toString net x),
 			Code => (try toString x)
