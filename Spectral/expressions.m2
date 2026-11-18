@@ -154,6 +154,18 @@ formatted Table := table -> grid(apply(toList table, row -> apply(toList row, ro
 formatted VectorExpression := vector -> grid(apply(toList vector, entry ->
 		{rod entry}), "Matrix")
 
+-- SparseVectorExpression{n, {(i, x), …}}: the vector of length n with x at i,
+-- drawn whole, zeros and all, as a vector is.
+formatted SparseVectorExpression := sparse -> (
+	entries := new MutableList from sparse#0 : expression 0;
+	scan(sparse#1, (i, entry) -> entries#i = entry);
+	formatted VectorExpression toList entries
+)
+-- SparseMonomialVectorExpression{n, {(i, m, a), …}}: the sum of each a·m times
+-- the i-th basis vector, which M2 spells <i> and treats as a variable.
+formatted SparseMonomialVectorExpression := sparse -> rod sum(sparse#1, (i, m, a) ->
+		expression a*expression m*hold atom("<" | toString i | ">", Symbol))
+
 -- Rows of cells, AlignedExpression{{a, b, c}, …}: every cell but a row's last
 -- sits in a column aligned across the rows, and the last runs on, wrapping
 -- beneath where it started.
