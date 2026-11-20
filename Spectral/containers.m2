@@ -10,9 +10,9 @@ rod VisibleList := items -> contentsOf(items, items -> Rod {apply(items, rod)})
 rod MutableList := rod Partition := items -> contentsOf(items, items ->
 		Rod {apply(toList items, rod)})
 rod Set := set' -> rod keys set'
-highlightGroup Option := class' -> hl$Option
+highlightGroup Option := class' -> HLG "Option"
 rod Option := pair -> contentsOf(pair, pair -> Rod {RowExpression {optionKey pair#0,
-	Rod {Holder {" => "}, {Highlight => hl$Operator}}, rod pair#1}})
+	Rod {Holder {" => "}, {Highlight => HLG "Operator"}}, rod pair#1}})
 
 -- A numbered vertical list numbers its rows from 0, the rows aligned beside
 -- their numbers.

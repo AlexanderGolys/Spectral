@@ -2,7 +2,7 @@
 -- every class draws as until its own block says otherwise.
 
 -- Rod{shape} or Rod{shape, meta}, the meta a list of options:
---   Rod{Holder{"+"}, {Highlight => hl$Operator}}
+--   Rod{Holder{"+"}, {Highlight => HLG "Operator"}}
 --   Rod{Divide{rod 1, rod 2}}
 new Rod from List := (Rod, contents) -> (
 	meta := if #contents > 1 then
@@ -10,16 +10,34 @@ new Rod from List := (Rod, contents) -> (
 		else {};
 	{contents#0, if instance(meta, HashTable) then
 				meta
-			else hashTable meta}
+			else hashTable apply(meta, entry -> field entry#0 => entry#1)}
 )
-Rod ++ List := Rod => (node, fields) -> Rod {node#0, merge(node#1, hashTable fields,
-	last@@splice)}
+Rod ++ List := Rod => (node, fields) -> Rod {node#0, join(pairs node#1, fields)}
 rod Rod := identity
+
+-- A key names the field of drawingFields spelled as it is, whichever symbol it
+-- was where it was written, so {Highlight => …} names Spectral's Highlight from
+-- any package; any other key is an error.
+field Symbol := key -> (
+	named := select(drawingFields, field' -> toString field' == toString key);
+	if #named == 0 then
+		error("no field " | toString key | " of a drawing; there are "
+				| demark(", ", apply(drawingFields, toString)))
+	else first named
+)
+
+new HLG from String := (HLG, name) -> (
+	if member(name, highlightGroups) then
+		{name} else error("no highlight group " | format name | "; there are "
+				| demark(", ", highlightGroups))
+)
+net HLG := toString HLG := group -> "HLG " | format group#0
 
 -- A drawing prints as the expression it is.
 net Rod := net@@first
 toString Rod := toString@@first
 texMath Rod := texMath@@first
+
 shapeOf Thing := x -> (
 	(select(ancestors class x, ancestor -> member(ancestor, shapes)))#0 ?? null
 )
@@ -28,19 +46,23 @@ shapeOf Thing := x -> (
 -- keeps the base's baseline; a diagram keeps its pieces in their places, without
 -- the arrows text cannot draw; a tree indents each subtree beneath its label.
 net UnderExpression := under -> net under#0 || net under#1
+
 net OverExpression := over -> (
 	(base, label) := (net over#0, net over#1);
 	(label || base)^(depth label + height base)
 )
+
 net AlignedExpression := aligned -> netList(apply(toList aligned, toList),
 	Boxes => false, HorizontalSpace => 1)
+
 net DiagramExpression := diagram -> (
 	places := hashTable apply(diagram#0, piece -> piece#0 => net piece#1);
 	(rows, columns) := toSequence apply(2, k -> max apply(keys places, place ->
 			place#k));
 	netList(apply(rows + 1, row -> apply(columns + 1, column ->
-			places#{row, column} ?? "")), Boxes => false, HorizontalSpace => 1)
+			places#{ row, column } ?? "")), Boxes => false, HorizontalSpace => 1)
 )
+
 net TreeExpression := tree -> stack apply(toList tree, branch -> stack prepend(
 	net branch#0, apply(unstack net branch#1, line -> "  " | line)
 ))
@@ -52,7 +74,7 @@ drawsAs (Rod, Type) := (node, type) -> (node#1#?Class
 -- The drawings a node is drawn from, every Rod in its shape's parts.
 parts Rod := node -> nested toList node#0
 nested Thing := part -> {}
-nested Rod := node -> {node}
+nested Rod := node -> { node }
 nested BasicList := items -> flatten apply(toList items, nested)
 
 -- A part with every Rod in it passed through `change`.
@@ -73,7 +95,7 @@ partsChanged (Rod, Function) := (node, change) -> Rod {
 -- lay out its parts passes on what it was given.
 typesetMarked (Rod, Boolean) := (node, forced) -> (
 	meta := node#1;
-	classes := select({Class, symbol Type}, field -> meta#?field)/(field ->
+	classes := select({ Class, symbol Type }, field -> meta#?field)/(field ->
 			meta#field);
 	setting := setting' -> any(classes, setting');
 	operator := setting typesetOperands;
@@ -81,7 +103,7 @@ typesetMarked (Rod, Boolean) := (node, forced) -> (
 	indexed := any(classes, class' -> ancestor(Subscript, class')
 			or ancestor(Superscript, class'));
 	if shapeOf node#0 === Holder then
-		node ++ {Typeset => marked}
+		node ++ { Typeset => marked }
 	else if #classes == 0 then
 		partsChanged(node, (position, part) -> typesetMarked(part, forced))
 	else partsChanged(node, (position, part) -> typesetMarked(part,
@@ -148,7 +170,7 @@ contentsOf (Thing, Function) := (container, draw) -> (
 		else opaque container;
 	unfoldable = budget;
 	beingDrawn = new MutableList from drop(toList beingDrawn, -1);
-	result ++ {symbol Type => class container}
+	result ++ { symbol Type => class container }
 )
 
 -- Draw x from `shape`, its expression with each parameter spelled in place
@@ -163,13 +185,13 @@ unfolding (Thing, Thing) := (x, shape) -> (
 	held := fold((drawn, parameter) -> (
 		spelled := expression parameter;
 		substituted := part -> if part === spelled then
-				Holder {parameter}
+				Holder { parameter }
 			else if instance(part, Expression) and not instance(part, Holder) then
 			apply(part, substituted)
 		else part;
 		substituted drawn
 	), shape, parameters x);
-	rod held ++ {symbol Type => class x}
+	rod held ++ { symbol Type => class x }
 )
 
 rod' (ZZ, Thing) := (depth, x) -> drawnWithin(depth, x, () -> rod x)
@@ -184,8 +206,8 @@ rod Intermediate := part -> (
 			part#3
 		else 1;
 	if unfoldable =!= null and unfoldable <= level then
-		rod name ++ {symbol Type => class component}
-	else rod shape ++ {symbol Type => class component}
+		rod name ++ { symbol Type => class component }
+	else rod shape ++ { symbol Type => class component }
 )
 
 -- Thing: what every class draws as until its own block says otherwise.
@@ -205,7 +227,7 @@ typewriter Thing := class' -> false
 -- A mathematical type is typed by the values it is built over rather than by
 -- the parts of its expression.
 typedByParameters Thing := class' -> false
-highlightGroup Thing := class' -> hl$Text
+highlightGroup Thing := class' -> HLG "Text"
 -- The values a structure is built over, which its expression spells in place.
 parameters Thing := x -> {}
 -- What a value is drawn from.
@@ -217,10 +239,10 @@ optionsDropped Array := items -> new Array from apply(select(toList items, item 
 		not (instance(item, BinaryOperation) and item#0 === symbol =>)),
 	optionsDropped)
 -- Values whose expression holds nothing but themselves.
-opaque Thing := x -> Rod {Holder {spelling x}, {
+opaque Thing := x -> Rod { Holder { spelling x }, {
 	Class => class x,
 	symbol Type => class x
-}}
+} }
 spelling Thing := x -> try toString x else toString class x
 rod Thing := x -> (
 	unfoldable ?? return rod'(valueDepth class x, x);
@@ -249,7 +271,7 @@ specType' (ZZ, Thing) := (depth, x) -> (
 				part#0
 			else part))
 	else return rod class x;
-	Rod {RowExpression {rod class x, Rod {new Array from inner}}}
+	Rod { RowExpression { rod class x, Rod { new Array from inner } } }
 )
 
 -- speek x: x inspected as peek inspects it, `depth` levels of containers deep,
@@ -261,20 +283,20 @@ speek' (ZZ, Thing) := (depth, x) -> rod x
 speek' (ZZ, BasicList) := (depth, items) -> (
 	if depth <= 0 then
 		rod items
-	else Rod {RowExpression {rod class items, Rod {apply(toList items, item ->
-			speek'(depth - 1, item))}}}
+	else Rod { RowExpression { rod class items, Rod { apply(toList items, item ->
+			speek'(depth - 1, item)) } } }
 )
 speek' (ZZ, HashTable) := (depth, table) -> (
 	if depth <= 0 then
 		rod table
-	else Rod {RowExpression {
+	else Rod { RowExpression {
 		if parent table =!= Nothing then
-			Rod {RowExpression {rod class table, Rod {Holder {" of "},
-				{Highlight => hl$Keyword}}, rod parent table}}
+			Rod { RowExpression { rod class table, Rod { Holder { " of " },
+				{ Highlight => HLG "Keyword" } }, rod parent table } }
 		else rod class table,
 		tabulated apply(sort(pairs table, toString@@first), (key, entry) ->
 				(optionKey key, speek'(depth - 1, entry)))
-	}}
+	} }
 )
 speek Thing := x -> speek'(1, x)
 
@@ -285,9 +307,9 @@ speek Thing := x -> speek'(1, x)
 -- decides the drawing stays behind.
 transmitted Rod := node -> (
 	(shape, meta) := toSequence node;
-	group := class' -> if instance(class', Type) then
-			highlightGroup class'
-		else class';
+	group := class' -> (if instance(class', Type) then
+				highlightGroup class'
+			else class')#0;
 	options := select(toList shape, part -> instance(part, Option));
 	hashTable join(
 		{
@@ -297,11 +319,11 @@ transmitted Rod := node -> (
 					transmitted))
 		},
 		apply(options, option -> option#0 => changedIn(option#1, transmitted)),
-		select(pairs meta, (field, value) -> not member(field, {Class,
-			symbol Type, Highlight})),
-		if shapeOf shape === Holder and meta#?Class then {Group =>
-				group meta#Class} else {},
-		if meta#?Highlight then {Highlight => group meta#Highlight} else {}
+		select(pairs meta, (field, value) -> not member(field, { Class,
+			symbol Type, Highlight })),
+		if shapeOf shape === Holder and meta#?Class then { Group =>
+				group meta#Class } else {},
+		if meta#?Highlight then { Highlight => group meta#Highlight } else {}
 	)
 )
 transmitted (Function, Thing, Thing) := (draw, x, fallback) -> transmitted(

@@ -29,9 +29,9 @@ operand (Thing, List) := (part, loose) -> (
 		Rod {Parenthesize {drawn}}
 	else drawn
 )
-space := Rod {Holder {" "}, {Highlight => hl$Canvas}}
+space := Rod {Holder {" "}, {Highlight => HLG "Canvas"}}
 -- A sign between operands, coloured as an operator.
-sign := text -> Rod {Holder {text}, {Highlight => hl$Operator}}
+sign := text -> Rod {Holder {text}, {Highlight => HLG "Operator"}}
 
 -- A sum is its terms between plus signs, each negative term's minus sign
 -- standing in for one; the empty sum is 0.
@@ -84,7 +84,7 @@ formatted Power := formatted Superscript := power -> Rod {Superscript {
 typeset Subscript := typesetOperands Subscript := class' -> true
 formatted Subscript := indexed -> Rod {Subscript {operand(indexed#0, looseOperand),
 	if instance(indexed#1, Sequence) then
-		Rod {RowExpression between(Rod {Holder {","}, {Highlight => hl$Delimiter}},
+		Rod {RowExpression between(Rod {Holder {","}, {Highlight => HLG "Delimiter"}},
 			apply(toList indexed#1, rod))}
 	else rod indexed#1}}
 
@@ -100,7 +100,7 @@ formatted FunctionApplication := application -> Rod {RowExpression {
 -- row, so a chain too wide breaks between its maps.
 typeset MapExpression := typesetOperands MapExpression := class' -> true
 formatted MapExpression := map -> (
-	arrow := Rod {Holder {"⟵"}, {Highlight => hl$MapArrow}};
+	arrow := Rod {Holder {"⟵"}, {Highlight => HLG "MapArrow"}};
 	target := rod map#0;
 	Rod {RowExpression join(if drawsAs(target, MapExpression) then
 				toList target#0

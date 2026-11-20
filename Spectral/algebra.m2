@@ -2,16 +2,16 @@
 -- All of it is typeset maths.
 
 typeset Number := class' -> true
-highlightGroup Number := class' -> hl$Number
+highlightGroup Number := class' -> HLG "Number"
 rod InexactNumber := opaque
 
 typeset RingElement := class' -> true
-highlightGroup RingElement := class' -> hl$Variable
+highlightGroup RingElement := class' -> HLG "Variable"
 
 -- A ring is drawn by its name, with its own TeX, and unnamed by what M2 spells
 -- it from.
 typeset Ring := class' -> true
-highlightGroup Ring := class' -> hl$Type
+highlightGroup Ring := class' -> HLG "Type"
 opaque Ring := x -> (lookup(opaque, Thing)) x ++ {Tex => texMath x}
 -- A ring is defined by its description, spelled as M2 spells an unnamed ring,
 -- without the options only a description lists; a fraction field over the
@@ -20,11 +20,11 @@ definition Ring := R -> optionsDropped expression (describe R)#0
 definition FractionField := F -> (expression frac) expression last F.baseRings
 
 typeset RingFamily := class' -> true
-highlightGroup RingFamily := class' -> hl$Type
+highlightGroup RingFamily := class' -> HLG "Type"
 opaque RingFamily := lookup(opaque, Ring)
 
 -- A functor such as OO or HH is drawn by its name, with its own TeX.
-highlightGroup ScriptedFunctor := class' -> hl$Function
+highlightGroup ScriptedFunctor := class' -> HLG "Function"
 opaque ScriptedFunctor := lookup(opaque, Ring)
 
 -- A ring is over what it is built from.
@@ -79,7 +79,7 @@ rod BettiTally := betti' -> contentsOf(betti', betti' -> (
 	columns := sort unique apply(keys betti', key -> key#0);
 	slants := sort unique apply(keys betti', key -> key#2 - key#0);
 	counted := select' -> sum(select(keys betti', select'), key -> betti'#key);
-	label := text -> Rod {Holder {text}, {Highlight => hl$Muted}};
+	label := text -> Rod {Holder {text}, {Highlight => HLG "Muted"}};
 	Rod {Table join({prepend(label "", apply(columns, rod))}, {prepend(label "total:",
 		apply(columns, i -> rod counted(key -> key#0 == i)))}, apply(slants, slant ->
 				prepend(label(toString slant | ":"), apply(columns, i -> (

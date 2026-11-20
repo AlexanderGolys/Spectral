@@ -8,7 +8,7 @@ Node
     Text
       @TO rod@ draws a value as its expression, each part laid out in one of
       the @TO "shapes"@ the shell draws and coloured by one of its highlight
-      groups, an @TO HLGroup@. @TO specType@ lays out the type
+      groups, an @TO HLG@. @TO specType@ lays out the type
       of a value the same way. Both are what the
       @HREF{"https://github.com/AlexanderGolys/spectral-m2", "spectral-m2"}@
       shell draws its results from, and work on their own: a @TO Rod@ prints as
@@ -22,8 +22,8 @@ Node
     Rod
     rod
     "shapes"
-    HLGroup
-    Highlight
+    HLG
+    "drawing meta"
     specType
     speek
     keepNames
@@ -67,7 +67,7 @@ Node
     Text
       A Rod is the format string a value is shown by: an expression in one of
       the @TO "shapes"@, its parts Rods in turn, and its meta, a list of options
-      saying how it is drawn, as listed under @TO Highlight@. Being an
+      saying how it is drawn, as listed under @TO "drawing meta"@. Being an
       expression, it prints as the text it lays out. An atom is a Holder of its
       text, coloured by the Class it is drawn as or by its Highlight.
       The shell is sent the tree with each colour named by its highlight
@@ -75,7 +75,7 @@ Node
     Example
       R = QQ[x, y];
       rod((x + 1)/2)
-      Rod {Divide {rod x, Rod {Holder {"n"}, {Highlight => hl$Keyword}}}}
+      Rod {Divide {rod x, Rod {Holder {"n"}, {Highlight => HLG "Keyword"}}}}
       speek rod(1/2)
 Node
   Key
@@ -101,7 +101,7 @@ Node
     Example
       R = QQ[x, y];
       formatted Sum := s -> Rod {RowExpression between(Rod {Holder {" (+) "},
-	      {Highlight => hl$Operator}}, apply(toList s, rod))};
+	      {Highlight => HLG "Operator"}}, apply(toList s, rod))};
       rod(x + y)
 Node
   Key
@@ -229,32 +229,32 @@ Node
   Description
     Text
       Install highlightGroup for a type as a method returning an
-      @TO HLGroup@; the method nearest in the type's ancestry applies, to an
-      atom of the type and to a Highlight naming it. Any class is hl$Text
-      unless it says otherwise: Number is hl$Number, RingElement and Symbol
-      are hl$Variable, Ring and Type are hl$Type, String is hl$String, and
-      Function is hl$Function.
+      @TO HLG@; the method nearest in the type's ancestry applies, to an
+      atom of the type and to a Highlight naming it. Any class is HLG "Text"
+      unless it says otherwise: Number is HLG "Number", RingElement and Symbol
+      are HLG "Variable", Ring and Type are HLG "Type", String is HLG "String", and
+      Function is HLG "Function".
     Example
       highlightGroup Ring
       MyRing = new Type of Ring;
-      highlightGroup MyRing := class' -> hl$Function;
+      highlightGroup MyRing := class' -> HLG "Function";
       highlightGroup MyRing
 Node
   Key
-    HLGroup
+    HLG
   Headline
     the shell's colours a drawing can name
   Description
     Text
-      Each is the constant hl$name of a highlight group of the shell's, those
-      code and its values are coloured with: hl$Text, hl$Muted, hl$Canvas,
-      hl$Keyword, hl$Operator, hl$Delimiter, hl$Punctuation, hl$Comment,
-      hl$String, hl$Number, hl$Boolean, hl$Builtin, hl$Variable, hl$Type,
-      hl$Function, hl$Macro, hl$Option, hl$Package, hl$MapArrow and
-      hl$MarkupLink. A @TO Highlight@ and a @TO highlightGroup@ name one of them.
+      HLG "name" is a highlight group of the shell's by its name, one of those
+      code and its values are coloured with, and any other name an error:
+      Text, Muted, Canvas, Keyword, Operator, Delimiter, Punctuation, Comment,
+      String, Number, Boolean, Builtin, Variable, Type, Function, Macro, Option,
+      Package, MapArrow and MarkupLink. A Highlight in a drawing's
+      @TO "drawing meta"@ and a @TO highlightGroup@ name one of them.
     Example
-      hl$Operator
-      Rod {Holder {"+"}, {Highlight => hl$Operator}}
+      HLG "Operator"
+      Rod {Holder {"+"}, {Highlight => HLG "Operator"}}
 Node
   Key
     specType
@@ -312,7 +312,6 @@ Node
     OverExpression
     DiagramExpression
     TreeExpression
-    Straight
   Headline
     the expression classes the shell draws
   Usage
@@ -334,23 +333,21 @@ Node
       drawsAs tells whether a drawing is laid out as an expression class.
     Example
       R = QQ[x, y];
-      shapes
       Rod {Superscript {rod x, rod 2}}
       drawsAs(rod(x + 1), Sum)
 Node
   Key
-    Class
-    Highlight
-    Reach
-    Target
-    Tex
+    "drawing meta"
   Headline
     what the meta of a Rod may carry
   Description
     Text
-      Class is the type a node is drawn as, which colours an atom by its
+      Its fields are named by symbols Spectral keeps to itself, which a meta
+      names by spelling: Highlight => HLG "Keyword" names Spectral's Highlight
+      whatever symbol Highlight is where it is written, and a name that is no
+      field is an error. Class is the type a node is drawn as, which colours an atom by its
       @TO highlightGroup@ and decides what is typeset. Highlight is an
-      @TO HLGroup@, or a type naming its highlightGroup, the node and its
+      @TO HLG@, or a type naming its highlightGroup, the node and its
       parts are coloured as in place of their own; Reach, when set, is how
       many levels below the node it reaches, 0 for the node alone. Target is a
       link the node opens, and Tex the TeX of an atom that has its own.

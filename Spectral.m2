@@ -5,26 +5,26 @@ newPackage(
 	Version => "0.5.0",
 	Date => "November 20, 2026",
 	Headline => "drawing values as structured, typed trees",
-	PackageImports => {"Complexes", "Varieties", "Text"},
-	Authors => {{
+	PackageImports => { "Complexes", "Varieties", "Text" },
+	Authors => { {
 		Name => "Alexander Golys",
 		Email => "alexandergolys@gmail.com",
 		HomePage => "https://eigenflux.dev"
-	}},
+	} },
 	HomePage => "https://github.com/AlexanderGolys/Spectral",
-	Keywords => {"Interfaces"},
+	Keywords => { "Interfaces" },
 	AuxiliaryFiles => true,
 	DebuggingMode => false
 )
 
 -- The highlight groups a drawing is coloured with, those of the shell's that
--- code and its values can be: each is the constant hl$<name>, an HLGroup, as
--- hl$Operator, and the shell colours nothing a drawing names otherwise.
+-- code and its values can be; the shell colours nothing a drawing names
+-- otherwise.
 highlightGroups = {"Text", "Muted", "Canvas", "Keyword", "Operator", "Delimiter",
 	"Punctuation", "Comment", "String", "Number", "Boolean", "Builtin", "Variable",
 	"Type", "Function", "Macro", "Option", "Package", "MapArrow", "MarkupLink"}
 
-export join({
+export {
 	"Rod",
 	"rod",
 	"rod'",
@@ -34,14 +34,7 @@ export join({
 	"speek'",
 	"formatted",
 	"drawsAs",
-	"shapes",
-	"HLGroup",
-	"Class",
-	"Highlight",
-	"Reach",
-	"Target",
-	"Tex",
-	"Straight",
+	"HLG",
 	"UnderExpression",
 	"OverExpression",
 	"AlignedExpression",
@@ -54,12 +47,21 @@ export join({
 	"typewriter",
 	"highlightGroup",
 	"keepNames"
-}, apply(highlightGroups, name -> "hl$" | name))
+}
 
--- A colour of the shell's, by the name of its highlight group.
-HLGroup = new SelfInitializingType of String
-scan(highlightGroups, name -> getGlobalSymbol(currentPackage.Dictionary, "hl$" | name)
-		<- HLGroup name)
+
+-- The fields a drawing's meta may name: Class, the type it is drawn as; a
+-- Highlight colouring it and its parts, reaching Reach levels below it; the
+-- Target it links to; an atom's own Tex; the Type of the value it stands for;
+-- whether an atom is Typeset; and, for a value drawn whole, its Fallback text,
+-- its Code, a documentation page's Html, the TypeNames the page resolves and
+-- the ExampleWidth its examples were archived at.
+drawingFields = {Class, Highlight, Reach, Target, Tex, symbol Type, Typeset,
+	Fallback, Code, Html, TypeNames, ExampleWidth}
+
+-- HLG "Operator": a highlight group by its name, one of highlightGroups; any
+-- other name is an error where the group is made.
+HLG = new SelfInitializingType of BasicList
 
 -- Spectral's own shapes, laid out as no class of Core's is.
 -- UnderExpression{base, label}, OverExpression{base, label}: a label centred
@@ -84,10 +86,10 @@ TreeExpression = new HeaderType of Expression
 -- between their delimiters, a fraction, a subscript and a superscript, a matrix
 -- with its rows' Degrees beside them, a bare table of cells, and Spectral's
 -- own. An expression of a class derived from one is drawn as that one.
-shapes = {Holder, RowExpression, Parenthesize, Divide, Subscript, Superscript,
+shapes = { Holder, RowExpression, Parenthesize, Divide, Subscript, Superscript,
 	List, Array, Sequence, AngleBarList, VerticalList, MatrixExpression, Table,
 	AlignedExpression, UnderExpression, OverExpression, DiagramExpression,
-	TreeExpression}
+	TreeExpression }
 
 -- A drawing, the format string a value is shown by: Rod{shape, meta}, an
 -- expression of one of the shapes whose parts are drawings in turn, and what
@@ -130,6 +132,9 @@ drawsAs = method(TypicalValue => Boolean)
 shapeOf = method(Dispatch => Thing)
 
 -- The drawing's own machinery, used by the methods of every class.
+-- field key: the field of a drawing's meta a key names, Spectral's own symbol
+-- spelled as the key is.
+field = method(Dispatch => Thing)
 -- parts drawn extends Core's parts to drawings: the drawings a node is built
 -- from, in the order they are read.
 -- nested part: the drawings in a part of a shape, a drawing or lists of them.
@@ -180,7 +185,7 @@ arranged = method(TypicalValue => DiagramExpression)
 
 -- Settings: what a class says of how its values are drawn, each a method of the
 -- class itself returning a constant, found up the class's ancestry as any
--- method is: install `highlightGroup Gene := class' -> hl$Keyword` to change one.
+-- method is: install `highlightGroup Gene := class' -> HLG "Keyword"` to change one.
 -- typeDepth T: how many levels of a T's type its annotation shows.
 typeDepth = method(Dispatch => Type, TypicalValue => ZZ)
 -- valueDepth T: how many levels of its own notation a T unfolds: a complex
@@ -196,7 +201,7 @@ typewriter = method(Dispatch => Type, TypicalValue => Boolean)
 -- rather than the parts of its expression.
 typedByParameters = method(Dispatch => Type, TypicalValue => Boolean)
 -- highlightGroup T: the shell's highlight group a T is coloured as.
-highlightGroup = method(Dispatch => Type, TypicalValue => HLGroup)
+highlightGroup = method(Dispatch => Type, TypicalValue => HLG)
 
 -- keepNames T: a T assigned to a global name is from then on drawn by that
 -- name inside other values, as M2 spells a ring: after keepNames Ideal and

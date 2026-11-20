@@ -2,7 +2,7 @@
 -- which is over its variety.
 
 typeset Variety := class' -> true
-highlightGroup Variety := class' -> hl$Variable
+highlightGroup Variety := class' -> HLG "Variable"
 parameters Variety := x -> {ring x}
 
 -- A sheaf of rings is spelled by M2 over its variety.
