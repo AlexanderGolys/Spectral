@@ -9,7 +9,7 @@ newPackage(
 	Authors => {{
 		Name => "Alexander Golys",
 		Email => "alexandergolys@gmail.com",
-		HomePage => "https://github.com/AlexanderGolys"
+		HomePage => "https://eigenflux.dev"
 	}},
 	HomePage => "https://github.com/AlexanderGolys/Spectral",
 	Keywords => {"Interfaces"},

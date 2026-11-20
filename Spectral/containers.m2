@@ -50,7 +50,7 @@ rod VirtualTally := tally' -> contentsOf(tally', tabulated)
 -- never typesets the hierarchy.
 rod Descent := tree -> contentsOf(tree, tree -> new Rod from {
 	Shape => "Tree",
-	Branches => apply(sort(pairs tree, pair -> toString net pair#0), pair -> {
+	Branches => apply(sort(pairs tree, toString @@ net @@ first), pair -> {
 		rod(toString net pair#0) ++ {Highlight => Type},
 		rod pair#1
 	})
