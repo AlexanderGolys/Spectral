@@ -41,11 +41,10 @@ ComplexMapExpression = new HeaderType of Expression
 -- of nonzero degree runs its components across columns, which characters cannot
 -- draw, so it also carries the Straight diagram, the target shifted under the
 -- components' sources and each complex numbered on its own.
-formatted ComplexMapExpression := shape -> (
-	aligned := arranged(shape, false);
+formatted ComplexMapExpression := shape -> formatted(
 	if shape#0 == 0 or #shape#3 == 0 then
-		aligned
-	else aligned ++ {Straight => arranged(shape, true)}
+		arranged(shape, false)
+	else append(arranged(shape, false), Straight => arranged(shape, true))
 )
 arranged (ComplexMapExpression, Boolean) := (shape, straight) -> (
 	(shift, source, target, components) := toSequence shape;
@@ -75,13 +74,11 @@ arranged (ComplexMapExpression, Boolean) := (shape, straight) -> (
 				| apply(select(chain, entry -> #entry > 2), entry ->
 						{at entry#0, at(entry#0 - 1), rod entry#2})}
 	));
-	new Rod from {
-		Shape => "Diagram",
-		Pieces => flatten apply(drawn, first) | flatten apply(numbered, (row,
-			offset, numbers) ->
-				apply(toList(min numbers .. max numbers), degree ->
-						{{row, column(degree, offset)}, rod degree})),
-		Arrows => flatten apply(drawn, last) | apply(components, component -> {
+	DiagramExpression {
+		flatten apply(drawn, first) | flatten apply(numbered, (row, offset,
+			numbers) -> apply(toList(min numbers .. max numbers), degree ->
+					{{row, column(degree, offset)}, rod degree})),
+		flatten apply(drawn, last) | apply(components, component -> {
 			{rows#0, column(component#0, offsets#0)},
 			{rows#1, column(component#0 + shift, offsets#1)},
 			rod component#1

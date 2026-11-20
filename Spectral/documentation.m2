@@ -6,8 +6,9 @@ Node
     structured value and type formatting
   Description
     Text
-      @TO rod@ lays a value out as a tree of shapes, as TeX lays out a
-      formula, each atom coloured by its class. @TO specType@ lays out the type
+      @TO rod@ draws a value as its expression, each part laid out in one of
+      the @TO "shapes"@ the shell draws and coloured by one of its highlight
+      groups, an @TO HLGroup@. @TO specType@ lays out the type
       of a value the same way. Both are what the
       @HREF{"https://github.com/AlexanderGolys/spectral-m2", "spectral-m2"}@
       shell draws its results from, and work on their own: a @TO Rod@ prints as
@@ -20,13 +21,12 @@ Node
   Subnodes
     Rod
     rod
-    atom
+    "shapes"
+    HLGroup
     Highlight
     specType
     speek
     keepNames
-    UnderExpression
-    AlignedExpression
 Node
   Key
     AlignedExpression
@@ -53,28 +53,29 @@ Node
   Description
     Text
       Keeps the baseline of the base while placing the label below it.
-      Complexes compose this with @TO MapExpression@ to show module degrees.
+      Complexes compose this with @TO MapExpression@ to show module degrees,
+      and a map's label sits over its arrow as an @TO OverExpression@.
 Node
   Key
     Rod
   Headline
-    a value laid out as a tree of shapes
+    an expression with how it is drawn
+  Usage
+    Rod{shape}
+    Rod{shape, meta}
   Description
     Text
-      A Rod is the format string a value is shown by: the expression it lays
-      out, each part keeping its colour, whether it is typeset and its own TeX.
-      M2 prints a Rod as the text it lays out; @TO speek@ shows its fields.
-      A Rod is one node of a layout, its parts in fields named by its
-      shape: an Atom of text in the colour of its class, a Row or a Join of
-      items, a Script, a Fraction, a Fence, a Grid, a label Over or Under a
-      base, a Diagram of pieces joined by arrows, or a Tree. Each shape has a
-      constructor, listed under @TO atom@, and any node may carry the
-      attributes listed under @TO Highlight@. The shell is sent the tree with
-      each atom named by the highlight group of its class, see
-      @TO highlightGroup@; the value itself is never sent.
+      A Rod is the format string a value is shown by: an expression in one of
+      the @TO "shapes"@, its parts Rods in turn, and its meta, a list of options
+      saying how it is drawn, as listed under @TO Highlight@. Being an
+      expression, it prints as the text it lays out. An atom is a Holder of its
+      text, coloured by the Class it is drawn as or by its Highlight.
+      The shell is sent the tree with each colour named by its highlight
+      group, see @TO highlightGroup@; the value itself is never sent.
     Example
       R = QQ[x, y];
       rod((x + 1)/2)
+      Rod {Divide {rod x, Rod {Holder {"n"}, {Highlight => hl$Keyword}}}}
       speek rod(1/2)
 Node
   Key
@@ -92,14 +93,15 @@ Node
       The default method unfolds @TO expression@ until an expression holds
       nothing but its value: a named value ends at its symbol, so nothing is
       read from inside rings or varieties. Each class of expression is laid out
-      by @TO formatted@, a sum between plus signs, a power as a script, a
-      matrix as a grid. Install @TO expression@ for a new type to compose
-      existing expression shapes, @TO formatted@ for an expression class to lay
-      it out differently, or rod for a type to draw it from the shapes
-      under @TO atom@ directly.
+      by @TO formatted@ in @TO "shapes"@: a sum as a row of its terms between
+      plus signs, a power as a superscript, a matrix as itself. Install
+      @TO expression@ for a new type to compose existing expressions,
+      @TO formatted@ for an expression class to lay it out differently, or rod
+      for a type to build its @TO Rod@ directly.
     Example
       R = QQ[x, y];
-      formatted Sum := s -> joined(apply(toList s, rod), " (+) ", "Operator");
+      formatted Sum := s -> Rod {RowExpression between(Rod {Holder {" (+) "},
+	      {Highlight => hl$Operator}}, apply(toList s, rod))};
       rod(x + y)
 Node
   Key
@@ -111,9 +113,10 @@ Node
     formatted e
   Description
     Text
-      The layout of an expression of e's class, which @TO rod@ marks with
-      that class. A class without a layout of its own is spelled by its name
-      over its parts.
+      The @TO Rod@ an expression of e's class is drawn as, which @TO rod@
+      marks with that class. An expression of one of the @TO "shapes"@ is drawn
+      as itself, its parts drawn in turn; a class without a layout of its own
+      is spelled by its name over its parts.
 Node
   Key
     valueDepth
@@ -225,18 +228,33 @@ Node
     highlightGroup T
   Description
     Text
-      Install highlightGroup for a type as a method returning the name of one
-      of the shell's highlight groups; the method nearest in the type's
-      ancestry applies, to an atom of the type and to a Highlight naming it. An atom
-      or a Highlight given a string rather than a type names its group
-      directly, as atom("+", "Operator") does. Any class is "Text" unless it
-      says otherwise: Number is "Number", RingElement and Symbol are "Variable", Ring and Type
-      are "Type", String is "String", and Function is "Function".
+      Install highlightGroup for a type as a method returning an
+      @TO HLGroup@; the method nearest in the type's ancestry applies, to an
+      atom of the type and to a Highlight naming it. Any class is hl$Text
+      unless it says otherwise: Number is hl$Number, RingElement and Symbol
+      are hl$Variable, Ring and Type are hl$Type, String is hl$String, and
+      Function is hl$Function.
     Example
       highlightGroup Ring
       MyRing = new Type of Ring;
-      highlightGroup MyRing := class' -> "Function";
+      highlightGroup MyRing := class' -> hl$Function;
       highlightGroup MyRing
+Node
+  Key
+    HLGroup
+  Headline
+    the shell's colours a drawing can name
+  Description
+    Text
+      Each is the constant hl$name of a highlight group of the shell's, those
+      code and its values are coloured with: hl$Text, hl$Muted, hl$Canvas,
+      hl$Keyword, hl$Operator, hl$Delimiter, hl$Punctuation, hl$Comment,
+      hl$String, hl$Number, hl$Boolean, hl$Builtin, hl$Variable, hl$Type,
+      hl$Function, hl$Macro, hl$Option, hl$Package, hl$MapArrow and
+      hl$MarkupLink. A @TO Highlight@ and a @TO highlightGroup@ name one of them.
+    Example
+      hl$Operator
+      Rod {Holder {"+"}, {Highlight => hl$Operator}}
 Node
   Key
     specType
@@ -281,77 +299,61 @@ Node
       parent when it has one, and its pairs, sorted as peek sorts them. Each
       entry is inspected one level less deep; past the depth, one level by
       default, and for anything else, a value is drawn as itself. A Rod is a
-      hash table too, so speek shows the fields a drawing is made of.
+      list too, so speek shows the shape and the meta of a drawing.
     Example
       speek {1, 1/2, {2}}
       speek'(2, {1, 1/2, {2}})
       speek rod(1/2)
 Node
   Key
-    atom
-    (atom, String, Thing)
-    row
-    (row, List)
-    joined
-    (joined, List, String, Thing)
-    listed
-    (listed, List, String, String)
-    script
-    (script, Rod, Thing, Thing)
-    (fraction, Rod, Rod)
-    fence
-    (fence, String, String, Rod)
-    parenthesized
-    (parenthesized, Rod)
-    grid
-    (grid, List, String)
-    labelled
-    (labelled, String, Rod, Rod)
+    "shapes"
     drawsAs
     (drawsAs, Rod, Type)
+    OverExpression
+    DiagramExpression
+    TreeExpression
+    Straight
   Headline
-    the shapes a Rod is built from
+    the expression classes the shell draws
   Usage
-    atom(text, class)
-    row items
-    joined(items, separator, class)
-    listed(items, left, right)
-    script(base, sub, sup)
-    fraction(numerator, denominator)
-    fence(left, right, body)
-    parenthesized body
-    grid(rows, align)
-    labelled(shape, base, label)
+    shapes
     drawsAs(drawn, type)
   Description
     Text
-      An atom is text in the colour of its class: a type, or the name of a
-      colour such as "Operator", "Delimiter" or "Punctuation". A row sets its
-      items side by side, and a join puts an atom of the separator between
-      each two; listed draws values, joins them by commas and fences them.
-      A script is a base with a subscript, a superscript or both, the one
-      absent null. A grid's rows are lists of cells, aligned as "Matrix", in
-      parentheses, "Bare", "LeftAligned", or "Aligned", where each row's last
-      cell runs on. A label sits "Over" or "Under" its base. drawsAs tells
-      whether a drawing is laid out as an expression class.
+      A @TO Rod@ is an expression of one of these classes, its parts Rods:
+      Holder{text}, an atom; RowExpression, its items side by side;
+      Parenthesize; Divide, a fraction; Subscript and Superscript; List, Array,
+      Sequence and AngleBarList, their items between their delimiters, and
+      VerticalList, one under another; MatrixExpression, its rows in
+      parentheses, its Degrees beside them; Table, a bare grid of cells; and
+      Spectral's own @TO AlignedExpression@, @TO UnderExpression@,
+      OverExpression{base, label}, DiagramExpression{pieces, arrows}, pieces
+      {{row, column}, piece} joined by arrows {from, to, label} with a Straight
+      diagram for a layout in characters, and TreeExpression{{label, subtree},
+      ...}. An expression of a class derived from one is drawn as that one.
+      drawsAs tells whether a drawing is laid out as an expression class.
     Example
       R = QQ[x, y];
-      script(atom("x", Symbol), rod 1, rod 2)
+      shapes
+      Rod {Superscript {rod x, rod 2}}
       drawsAs(rod(x + 1), Sum)
 Node
   Key
+    Class
     Highlight
     Reach
     Target
     Tex
   Headline
-    what any node of a Rod may carry
+    what the meta of a Rod may carry
   Description
     Text
-      Highlight is a class the node and its parts are coloured as, in place of
-      their own; Reach, when set, is how many levels below the node it reaches,
-      0 for the node alone. Target is a link the node opens, and Tex the TeX of
-      an atom that has its own.
+      Class is the type a node is drawn as, which colours an atom by its
+      @TO highlightGroup@ and decides what is typeset. Highlight is an
+      @TO HLGroup@, or a type naming its highlightGroup, the node and its
+      parts are coloured as in place of their own; Reach, when set, is how
+      many levels below the node it reaches, 0 for the node alone. Target is a
+      link the node opens, and Tex the TeX of an atom that has its own.
     Example
       R = QQ[x, y];
       rod Ideal := I -> (lookup(rod, Thing)) I ++ {Highlight => Keyword, Reach => 1};
