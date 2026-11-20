@@ -7,16 +7,19 @@ It is what the [spectral-m2](https://github.com/AlexanderGolys/spectral-m2) shel
 ```m2
 needsPackage "Spectral"
 R = QQ[x, y];
+I = ideal(x^2, y);
 rod(x/2)          -- a Rod, printed as the text it lays out
-speek {1, 1/2}    -- List{1, 1/2}: inspected as peek inspects it, drawn
-speek rod(1/2)    -- the fields of the drawing itself
+rod(R/I)          -- R/I: a value a global name holds is drawn by that name
+rod'_1(R/I)       -- QQ[x .. y]/ideal(x^2, y): the names resolved once
+specType(R^2)     -- Module[R]
+speek(1/2)        -- the drawing itself, the table of fields it is
 
 Point = new Type of List
-expression Point := p -> new FunctionApplication from (symbol point, toSequence p)
+rod Point := p -> rod' FunctionApplication {symbol point, toSequence p}
 rod new Point from {1, 1/2}   -- point(1, 1/2)
 ```
 
-A class that already has an `expression` is drawn from it with nothing else to do. Install `rod` for a class to draw it some other way. What a class says about how its values are drawn, its colour or the depth its type is shown to, is a method of the class returning a constant: `highlightGroup Point := class' -> HLG "Function"`.
+Install `rod` for a class to draw its values: it returns a `Rod`, here the drawing of an expression the class is spelled by, or one built of shapes whose parts are drawn with `rod'` and whose fields say how it is drawn, its colour `Group`, whether it is `Typeset`, the link it opens. A class without a `rod` is spelled as M2 spells it. The values a type is over are what `typeParameters` of the class gives: `typeParameters Module := M -> {ring M}`.
 
 ## Install
 

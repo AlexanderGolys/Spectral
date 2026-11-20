@@ -10,8 +10,7 @@ exampleWidth := value Core#"private dictionary"#"ArgPrintWidthN"
 -- node pointing at the node's key, spelled as the M2 string `help` reads, so
 -- the shell can open it. M2 links a tag wherever it appears with the same
 -- target, so the target its own link gets is the one to replace.
-keysLinked = method()
-keysLinked (String, Hypertext) := String => (page, document) -> (
+keysLinked := (page, document) -> (
 	links := part -> if instance(part, TO) or instance(part, TO2) or instance(part, TOH)
 		then {part#0} else if instance(part, Hypertext) then
 		flatten apply(toList part, links)
@@ -33,8 +32,7 @@ keysLinked (String, Hypertext) := String => (page, document) -> (
 -- as a source position spells it. `file:///dir/name.m2#L1:C2` is spelled with its whole
 -- directory, which is most of a line and none of what is wanted; its text
 -- keeps the file's name, one directory above it, and the position.
-pathsShortened = method()
-pathsShortened String := page -> (
+pathsShortened := page -> (
 	pattern := ///(<a href="file://([^"#]*)[^"]*">)([^<]*)</a>///;
 	shortened := "";
 	while (match := regex(pattern, page)) =!= null do (
@@ -42,7 +40,7 @@ pathsShortened String := page -> (
 		text := substring(match#3, page);
 		shortened = shortened | substring(page, 0, match#0#0) | substring(match#1, page)
 			| (if substring(text, 0, #path) == path then
-						spelling new FilePosition from {path} | substring(text, #path)
+						toString rod new FilePosition from {path} | substring(text, #path)
 					else text) | "</a>";
 		page = substring(page, match#0#0 + match#0#1)
 	);
@@ -52,15 +50,16 @@ pathsShortened String := page -> (
 -- sourcesLinked page: the HTML `page` with each source position set as code,
 -- `name.m2:12:3`, made a link to its file, found on the load path; a position
 -- whose file cannot be found stays as it is.
-sourcesLinked = method()
-sourcesLinked String := page -> (
+sourcesLinked := page -> (
 	pattern := ///<span class="tt">([^<]*\.m2):([0-9]+):([0-9]+)</span>///;
 	linked := "";
 	while (match := regex(pattern, page)) =!= null do (
 		file := replace("&amp;", "&", replace("&gt;", ">", replace("&lt;", "<",
 			substring(match#1, page))));
-		target := (rod new FilePosition from {file,
-			value substring(match#2, page), value substring(match#3, page)})#Target;
+		position := rod new FilePosition from {file, value substring(match#2, page),
+			value substring(match#3, page)};
+		target := if position#?Target then
+				position#Target;
 		original := substring(match#0, page);
 		linked = linked | substring(page, 0, match#0#0)
 			| (if target === null then
@@ -71,8 +70,7 @@ sourcesLinked String := page -> (
 	linked | page
 )
 
-spelling Hypertext := toString@@net
-rod Hypertext := page -> opaque page ++ {
+rod Hypertext := page -> Rod {Holder {toString net page},
 	Html => sourcesLinked pathsShortened keysLinked(html page, page),
 	TypeNames => unique flatten apply(dictionaryPath, dictionary ->
 			select(keys dictionary, name -> instance(value dictionary#name, Type))),

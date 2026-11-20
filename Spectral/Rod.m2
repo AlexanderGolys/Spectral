@@ -1,30 +1,15 @@
--- The drawing itself: what a Rod is, how a value unfolds into one, and what
--- every class draws as until its own block says otherwise.
+-- The drawing itself: what a Rod is, and how a value is drawn into one by its
+-- value, the global names inside it resolved as many times as asked.
 
--- Rod{shape, field => value, …}: a drawing, the expression it lays out and how
--- it is drawn, a table of its fields; the shape is the field Shape, also
--- written Shape => shape:
+-- Rod{shape, field => value, …}: a drawing of `shape` with the given fields;
+-- a field given as null is not set, so one may be given only when it applies.
 --   Rod{Holder{"+"}, Highlight => HLG "Operator"}
---   Rod{Divide{rod 1, rod 2}}
-new Rod from List := (Rod, contents) -> hashTable apply(contents, entry ->
-		if instance(entry, Option) then
-		field entry#0 => entry#1
-	else Shape => entry)
-Rod ++ List := Rod => (node, fields) -> Rod join(apply(pairs node, (key, value) ->
-		key => value), fields)
-rod Rod := identity
--- What a drawing draws, as an expression of its own: its shape with every
--- part's expression in place of the part, so M2 prints it as it prints that
--- expression.
-expression Rod := node -> changedIn(node#Shape, expression)
-
--- A key names the field spelled as it is, whichever symbol it was where it was
--- written; any other key is an error.
-field Thing := key -> (
-	(select(drawingFields, field' -> toString field' == toString key))#0
-		?? error("no field " | toString key | " of a drawing; there are "
-				| demark(", ", apply(drawingFields, toString)))
-)
+--   Rod{Holder{"x"}, Group => if bound then HLG "Variable"}
+new Rod from List := (Rod, contents) -> hashTable select(prepend(Shape => first contents,
+	drop(contents, 1)), field -> field#1 =!= null)
+-- node ++ {field => value, …}: the drawing with those fields set anew.
+Rod ++ List := Rod => (node, fields) -> merge(node, Rod prepend(node.Shape, fields),
+	last)
 
 new HLG from String := (HLG, name) -> (
 	if member(name, highlightGroups) then
@@ -33,28 +18,34 @@ new HLG from String := (HLG, name) -> (
 )
 net HLG := toString HLG := group -> "HLG " | format group#0
 
--- A drawing prints as the expression it is.
+-- A part of a shape with every drawing in it passed through `change`: the lists
+-- a shape arranges its parts in are kept, anything else is left as it is.
+throughRods := (part, change) -> (
+	if instance(part, Rod) then
+		change part
+	else if instance(part, BasicList) then
+		apply(part, item -> throughRods(item, change))
+	else part
+)
+
+-- A drawing prints as the expression it is: its shape with every part's
+-- expression in place of the part.
+expression Rod := node -> throughRods(node#Shape, expression)
 net Rod := net@@expression
 toString Rod := toString@@expression
 texMath Rod := texMath@@expression
 
-shapeOf Thing := x -> (
-	(select(ancestors class x, ancestor -> member(ancestor, shapes)))#0 ?? null
-)
-
--- Spectral's shapes print as they are laid out: a label over or under its base
--- keeps the base's baseline; a diagram keeps its pieces in their places, without
--- the arrows text cannot draw; a tree indents each subtree beneath its label.
+-- Spectral's shapes print as they are laid out, as text too: a label over or
+-- under its base keeps the base's baseline; a diagram keeps its pieces in
+-- their places, without the arrows text cannot draw; a tree indents each
+-- subtree beneath its label.
 net UnderExpression := under -> net under#0 || net under#1
-
 net OverExpression := over -> (
 	(base, label) := (net over#0, net over#1);
 	(label || base)^(depth label + height base)
 )
-
 net AlignedExpression := aligned -> netList(apply(toList aligned, toList),
 	Boxes => false, HorizontalSpace => 1)
-
 net DiagramExpression := diagram -> (
 	places := hashTable apply(diagram#0, piece -> piece#0 => net piece#1);
 	(rows, columns) := toSequence apply(2, k -> max apply(keys places, place ->
@@ -62,278 +53,176 @@ net DiagramExpression := diagram -> (
 	netList(apply(rows + 1, row -> apply(columns + 1, column ->
 			places#{ row, column } ?? "")), Boxes => false, HorizontalSpace => 1)
 )
-
 net TreeExpression := tree -> stack apply(toList tree, branch -> stack prepend(
 	net branch#0, apply(unstack net branch#1, line -> "  " | line)
 ))
+scan({UnderExpression, OverExpression, AlignedExpression, DiagramExpression,
+	TreeExpression}, shape -> toString shape := toString@@net)
 
--- Whether a node is drawn as `type`, or as something derived from it.
-drawsAs (Rod, Type) := (node, type) -> (node#?Class
-		and ancestor(type, node#Class))
-
--- The drawings a node is drawn from, every Rod in its shape's parts.
-parts Rod := node -> nested toList node#Shape
-nested Thing := part -> {}
-nested Rod := node -> { node }
-nested BasicList := items -> flatten apply(toList items, nested)
-
--- A part with every Rod in it passed through `change`.
-changedIn (Thing, Function) := (part, change) -> part
-changedIn (Rod, Function) := (node, change) -> change node
-changedIn (BasicList, Function) := (items, change) -> apply(items,
-	item -> changedIn(item, change))
-partsChanged (Rod, Function) := (node, change) -> (
-	shape := node#Shape;
-	node ++ {Shape => new class shape from apply(#shape, position ->
-			changedIn(shape#position, part -> change(position, part)))}
-)
-
--- Mark each atom whether it is typeset: by the class it is drawn as or the
--- class of the value it stands for, or for being held by a typeset value or an
--- operator, unless its class keeps a typewriter face. The script of a subscript
--- or superscript, its second part, keeps its own setting; a node built only to
--- lay out its parts passes on what it was given.
-typesetMarked (Rod, Boolean) := (node, forced) -> (
-	classes := select({ Class, symbol Type }, key -> node#?key)/(key -> node#key);
-	setting := setting' -> any(classes, setting');
-	operator := setting typesetOperands;
-	marked := not setting typewriter and (forced or setting typeset or operator);
-	indexed := any(classes, class' -> ancestor(Subscript, class')
-			or ancestor(Superscript, class'));
-	if shapeOf node#Shape === Holder then
-		node ++ { Typeset => marked }
-	else if #classes == 0 then
-		partsChanged(node, (position, part) -> typesetMarked(part, forced))
-	else partsChanged(node, (position, part) -> typesetMarked(part,
-		if operator then
-			not (indexed and position == 1)
-		else marked and setting typeset))
-)
-
--- Values being drawn: a container that holds itself is drawn once.
-beingDrawn := new MutableList
--- How many levels of notation the value being drawn unfolds, and that value,
--- which alone is spelled out from its definition though it has a name; both
--- unset outside a drawing.
-unfoldable := null
+-- The drawing in progress: the value it is of, which alone is drawn by its
+-- value though a name holds it; how many more times a global name inside it is
+-- resolved to its value; the values being drawn, so that a container holding
+-- itself is drawn once; and the global name of each value of the named
+-- classes. All unset outside a drawing; the shell clears what a drawing that
+-- threw part-way left behind after every result.
 outermost := null
--- Clear what a drawing that threw part-way left behind, so the next drawing
--- starts outside any; the shell calls it after every result.
-forgetDrawing = () -> (
-	beingDrawn = new MutableList;
-	(unfoldable, outermost) = (null, null)
-)
-drawnWithin (ZZ, Thing, Function) := (depth, x, draw) -> (
-	(outer, spelled) := (unfoldable, outermost);
-	if outer === null then
-		outermost = x;
-	unfoldable = depth;
-	result := draw();
-	(unfoldable, outermost) = (outer, spelled);
-	result
+resolutions := null
+beingDrawn := {}
+globalNames := null
+forgetDrawing = () -> (outermost, resolutions, beingDrawn, globalNames) = (null,
+	null, {}, null)
+
+-- The user's values of the named classes by their global names, a value held
+-- by several by the first of them in alphabetical order.
+userNames := () -> (
+	dictionary := User#"private dictionary";
+	names := new MutableHashTable;
+	scan(sort keys dictionary, name -> (
+		x := value dictionary#name;
+		if any(namedClasses, class' -> instance(x, class')) and not names#?x then
+			names#x = name
+	));
+	names
 )
 
--- The global name each value of a class keeping names was last assigned to,
--- which it is drawn by from then on, as M2 spells a ring by its name: `=` hides
--- a value behind its name, `:=` keeps it spelled out. A name is forgotten when
--- it is assigned something else.
-globalNames := new MutableHashTable
-keepNames Type := class' -> (
-	(assigned, released) := (lookup(GlobalAssignHook, class'),
-		lookup(GlobalReleaseHook, class'));
-	class'.GlobalAssignHook = (name, x) -> (
-		if assigned =!= null then
-			assigned(name, x);
-		if not globalNames#?x then
-			globalNames#x = name
-	);
-	class'.GlobalReleaseHook = (name, x) -> (
-		if released =!= null then
-			released(name, x);
-		if globalNames#?x and globalNames#x === name then
-			remove(globalNames, x)
-	);
-)
-globalName Thing := x -> if globalNames#?x then globalNames#x
-
--- A container drawn by `draw`, at the container's own depth; a container
--- already being drawn, which holds itself, is drawn opaque.
-contentsOf (Thing, Function) := (container, draw) -> (
-	unfoldable ?? return rod'(valueDepth class container, container);
-	if any(toList beingDrawn, ancestor -> ancestor === container) then
-		return opaque container;
-	beingDrawn#(#beingDrawn) = container;
-	budget := unfoldable;
-	result := try draw container
-		else opaque container;
-	unfoldable = budget;
-	beingDrawn = new MutableList from drop(toList beingDrawn, -1);
-	result ++ { symbol Type => class container }
+-- draw() run in the drawing of x, resolving `depth` names; a drawing inside
+-- none is the drawing of x.
+within := (depth, x, draw) -> (
+	starting := resolutions === null;
+	if starting then
+		(outermost, globalNames) = (x, userNames());
+	outer := resolutions;
+	resolutions = depth;
+	drawn := draw();
+	resolutions = outer;
+	if starting then
+		forgetDrawing();
+	drawn
 )
 
--- Draw x from `shape`, its expression with each parameter spelled in place
--- given back as the parameter itself, so that it is drawn in its turn; a named
--- x is drawn by its name.
-unfolding (Thing, Thing) := (x, shape) -> (
-	unfoldable ?? return rod'(valueDepth class x, x);
-	name := if x =!= outermost then
-			globalName x;
-	if name =!= null then
-		return rod name;
-	held := fold((drawn, parameter) -> (
-		spelled := expression parameter;
-		substituted := part -> if part === spelled then
-				Holder { parameter }
-			else if instance(part, Expression) and not instance(part, Holder) then
-			apply(part, substituted)
-		else part;
-		substituted drawn
-	), shape, parameters x);
-	rod held ++ { symbol Type => class x }
+-- A value Spectral cannot draw, spelled as M2 spells it.
+spelledAsM2 = x -> Rod { Holder { try toString x
+		else toString class x },
+	Class => class x, Group => HLG "Text" }
+
+-- The expression of a value with each value it is built over that a global
+-- name holds drawn in its place: a parameter is a value spelled by its
+-- expression, held or bare, as M2 spells a named ring R by Holder{R} or R
+-- itself, or `spelling => value` for one spelled otherwise.
+heldInPlace := (shape, parameters) -> fold((held, parameter) -> (
+	(spelling, x) := if instance(parameter, Option) then
+			toSequence parameter
+		else (expression parameter, parameter);
+	bare := if instance(spelling, Holder) then
+			spelling#0;
+	inPlace := part -> if part === spelling or part === bare then
+			Holder { x }
+		else if instance(part, Expression) and not instance(part, Holder) then
+		apply(part, inPlace)
+	else part;
+	if globalNames#?x then
+		inPlace held
+	else held
+), shape, parameters)
+
+-- x drawn by its value: laid out by its class's rod and marked with its class
+-- unless it says what it is laid out as. A drawing listing Parameters is yet
+-- to be drawn: its Shape is the expression of a value, drawn in turn with its
+-- other fields kept.
+drawnByValue := x -> (
+	if instance(x, Rod) then
+		return (if x#?Parameters then
+					rod' heldInPlace(x#Shape, x#Parameters) ++ apply(select(pairs x,
+						(key, value) -> key =!= Shape and key =!= Parameters),
+						(key, value) -> key => value)
+				else x);
+	draw := lookup(rod, class x);
+	if draw === null or any(beingDrawn, held -> held === x) then
+		return spelledAsM2 x;
+	beingDrawn = append(beingDrawn, x);
+	drawn := draw x;
+	beingDrawn = drop(beingDrawn, -1);
+	if drawn#?Class then
+		drawn
+	else drawn ++ { Class => class x }
 )
 
-rod' (ZZ, Thing) := (depth, x) -> drawnWithin(depth, x, () -> rod x)
+-- rod' x, a part of the drawing in progress: by the global name holding it
+-- while names are left unresolved, by its value with one resolution fewer when
+-- they are resolved, and by its value when no name holds it. Outside a
+-- drawing it begins one, resolving none. rod'_n x: x drawn by its value, the
+-- names inside it resolved n times.
+rod' = deepened(x -> (
+	if resolutions === null then
+		return within(0, null, () -> rod' x);
+	name := if x =!= outermost and globalNames#?x then
+			globalNames#x;
+	if name === null then
+		drawnByValue x
+	else if resolutions == 0 then
+		Rod { Holder { name }, Class => Symbol, Group => HLG "Variable",
+			Typeset => true }
+	else within(resolutions - 1, x, () -> drawnByValue x)
+), (depth, x) -> within(depth, x, () -> drawnByValue x))
+rod Rod := rod'
 
--- A part a drawing introduces for a structure, as {name, part, shape} or
--- {name, part, shape, level}: spelled by its name until the drawing unfolds
--- more levels than that (one by default), then drawn from its shape.
-Intermediate = new HeaderType of Expression
-rod Intermediate := part -> (
-	(name, component, shape) := toSequence take(part, 3);
-	level := if #part > 3 then
-			part#3
-		else 1;
-	if unfoldable =!= null and unfoldable <= level then
-		rod name ++ { symbol Type => class component }
-	else rod shape ++ { symbol Type => class component }
-)
+-- A type annotation: the class of x over its typeParameters, by their names
+-- until `depth` resolves them: R^2 is Module[R], and at depth one
+-- Module[QQ[x, y]] for R = QQ[x, y].
+typeParameters Thing := x -> {}
+specType' = deepened(x -> specType x, (depth, x) -> within(0, x, () -> (
+	type := rod' class x;
+	parameters := typeParameters x;
+	if #parameters == 0 then
+		type
+	else Rod { RowExpression { type, Rod { new Array from apply(parameters,
+		parameter -> within(depth, x, () -> rod' parameter)) } } }
+)))
+specType Thing := specType'_0
 
--- Thing: what every class draws as until its own block says otherwise.
--- A value is drawn as what its expression is made of, down to expressions that
--- hold nothing but the value itself; its type is a bounded fold of its parts.
-typeDepth Thing := valueDepth Thing := class' -> 1
--- Whether a drawing is set as typeset maths: values of a mathematical type,
--- and the shapes only typesetting draws well. Whatever such a value holds is
--- typeset with it; anything typeset only to sit beside it, a name or a string
--- in the same list, keeps a typewriter face.
-typeset Thing := class' -> false
--- Operators set their operands as maths, all but the script of a subscript or
--- superscript. Containers only hold their entries, which keep their own setting.
-typesetOperands Thing := class' -> false
--- An operator's operands of a typewriter class still keep a typewriter face.
-typewriter Thing := class' -> false
--- A mathematical type is typed by the values it is built over rather than by
--- the parts of its expression.
-typedByParameters Thing := class' -> false
-highlightGroup Thing := class' -> HLG "Text"
--- The values a structure is built over, which its expression spells in place.
-parameters Thing := x -> {}
--- What a value is drawn from.
-spelledShape (Thing, Thing) := (x, shape) -> shape
-definition Thing := expression
-optionsDropped Thing := identity
-optionsDropped Expression := shape -> apply(shape, optionsDropped)
-optionsDropped Array := items -> new Array from apply(select(toList items, item ->
-		not (instance(item, BinaryOperation) and item#0 === symbol =>)),
-	optionsDropped)
--- Values whose expression holds nothing but themselves.
-opaque Thing := x -> Rod { Holder { spelling x }, Class => class x,
-	symbol Type => class x }
-spelling Thing := x -> try toString x else toString class x
-rod Thing := x -> (
-	unfoldable ?? return rod'(valueDepth class x, x);
-	shape := if x === outermost then
-			definition x
-		else expression x;
-	if instance(shape, Holder) and shape#0 === x then
-		opaque x
-	else if instance(shape, Holder) and instance(shape#0, Symbol) then
-		rod shape#0
-	else unfolding(x, spelledShape(x, shape))
-)
-specType Thing := x -> specType'(typeDepth class x, x)
--- Each level of a type below the outermost unfolds the values it is built
--- over, or the parts of its expression, one level further. A type is drawn
--- inside the drawing of its value, so what the value is built over is drawn by
--- its name.
-specType' (ZZ, Thing) := (depth, x) -> (
-	unfoldable ?? return drawnWithin(valueDepth class x, x, () ->
-			specType'(depth, x));
-	shape := expression x;
-	inner := if depth <= 1 then
-			return rod class x
-		else if typedByParameters class x then
-		apply(parameters x, parameter -> rod'(depth - 2, parameter))
-	else if instance(shape, Expression) and not instance(shape, Holder) then
-		apply(toList shape, part -> specType'(depth - 1,
-			if instance(part, Holder) then
-				part#0
-			else part))
-	else return rod class x;
-	Rod { RowExpression { rod class x, Rod { new Array from inner } } }
+-- The shape an expression is drawn as, the nearest of its class's ancestors
+-- among the shapes.
+shapeOf := shape -> (
+	(select(ancestors class shape, ancestor -> member(ancestor, shapes)))#0
 )
 
--- speek x: x inspected as peek inspects it, `depth` levels of containers deep,
--- one by default: a list or an expression as its class over its entries, a
--- table as its class, its parent when it has one, and its pairs sorted as peek
--- sorts them; anything else, and anything past the depth, drawn as itself.
--- A Rod is a table too, so speek'(3, rod x) shows the tree x is drawn as.
-speek' (ZZ, Thing) := (depth, x) -> rod x
-speek' (ZZ, BasicList) := (depth, items) -> (
-	if depth <= 0 then
-		rod items
-	else Rod { RowExpression { rod class items, Rod { apply(toList items, item ->
-			speek'(depth - 1, item)) } } }
-)
-speek' (ZZ, HashTable) := (depth, table) -> (
-	if depth <= 0 then
-		rod table
-	else Rod { RowExpression {
-		if parent table =!= Nothing then
-			Rod { RowExpression { rod class table, Rod { Holder { " of " },
-				Highlight => HLG "Keyword" }, rod parent table } }
-		else rod class table,
-		tabulated apply(sort(pairs table, toString@@first), (key, entry) ->
-				(optionKey key, speek'(depth - 1, entry)))
-	} }
-)
-speek Thing := x -> speek'(1, x)
-
--- What the shell is sent for a value, its type or its inspection: the shape's
--- name, its Parts and its options as fields of their own, and what the drawing
--- says of how it is drawn, an atom's colour named by the highlight group of its
--- Class and a Highlight by its own, a type by its highlightGroup. What only
--- decides the drawing stays behind.
-transmitted Rod := node -> (
+-- A drawing as the shell is sent it: its shape's name, its Parts and its
+-- options as fields of their own, and what it says of how it is drawn, every
+-- colour by its highlight group's name. An atom is typeset as it says, or as
+-- the drawing holding it is when it says nothing, a drawing saying nothing
+-- passing on what it was given. What only decides the drawing stays behind.
+drawnHere := { Shape, Class, Parameters, Typeset, Group, Highlight }
+transmitted := (node, forced) -> (
 	shape := node#Shape;
-	drawnHere := { Shape, Class, symbol Type, Highlight };
-	group := class' -> (if instance(class', Type) then
-				highlightGroup class'
-			else class')#0;
+	typeset := if node#?Typeset then
+			node#Typeset
+		else forced;
+	sent := part -> throughRods(part, part' -> transmitted(part', typeset));
+	parts := select(toList shape, part -> not instance(part, Option));
 	options := select(toList shape, part -> instance(part, Option));
+	atom := shapeOf shape === Holder;
 	hashTable join(
 		{
 			"Shape" => toString shapeOf shape,
-			"Parts" => apply(select(toList shape,
-				part -> not instance(part, Option)), part -> changedIn(part,
-					transmitted))
+			"Parts" => apply(parts, sent)
 		},
-		apply(options, option -> toString option#0 => changedIn(option#1, transmitted)),
+		apply(options, option -> toString option#0 => sent option#1),
 		apply(select(pairs node, (key, value) -> not member(key, drawnHere)),
 			(key, value) -> toString key => value),
-		if shapeOf shape === Holder and node#?Class then { "Group" =>
-				group node#Class } else {},
-		if node#?Highlight then { "Highlight" =>
-				group node#Highlight } else {}
+		if atom then { "Typeset" => typeset } else {},
+		if atom and node#?Group then { "Group" => node#Group#0 } else {},
+		if node#?Highlight then { "Highlight" => node#Highlight#0 } else {}
 	)
 )
-transmitted (Function, Thing, Thing) := (draw, x, fallback) -> transmitted(
-	try typesetMarked(draw x, false)
-	else opaque fallback
-)
-drawnAs = x -> transmitted(x -> rod x ++ {
+
+-- What the shell is sent for a value, its type and its structure; a drawing a
+-- broken rod throws out of is sent as the fallback's own text.
+sent := (draw, x, fallback) -> transmitted(try draw x
+		else spelledAsM2 fallback,
+	false)
+drawnAs = x -> sent(x -> rod'_0 x ++ {
 	Fallback => (try toString net x),
 	Code => (try toString x)
 }, x, x)
-typedAs = x -> transmitted(specType, x, class x)
-inspectedAs = x -> transmitted(speek, x, x)
+typedAs = x -> sent(specType, x, class x)
+inspectedAs = x -> sent(speek, x, x)
