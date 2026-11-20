@@ -16,7 +16,7 @@ expression Point := p -> new FunctionApplication from (symbol point, toSequence 
 rod new Point from {1, 1/2}   -- point(1, 1/2)
 ```
 
-A class that already has an `expression` is drawn from it with nothing else to do. Install `rod` for a class to draw it some other way. What a class says about how its values are drawn, its colour or the depth its type is shown to, is a method of the class returning a constant: `highlightGroup Point := class' -> "Function"`.
+A class that already has an `expression` is drawn from it with nothing else to do. Install `rod` for a class to draw it some other way. What a class says about how its values are drawn, its colour or the depth its type is shown to, is a method of the class returning a constant: `highlightGroup Point := class' -> hl$Function`.
 
 ## Install
 
