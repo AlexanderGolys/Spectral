@@ -2,8 +2,8 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "0.2.0",
-	Date => "November 18, 2026",
+	Version => "0.3.0",
+	Date => "November 20, 2026",
 	Headline => "drawing values as structured, typed trees",
 	PackageImports => {"Complexes", "Varieties", "Text"},
 	Authors => {{
@@ -46,7 +46,8 @@ export {
 	"valueDepth",
 	"typeset",
 	"typesetOperands",
-	"typewriter"
+	"typewriter",
+	"highlightGroup"
 }
 
 -- A drawing: one shaped node of a tree laid out as TeX lays out a formula, its
@@ -115,8 +116,8 @@ changedIn = method()
 -- partsChanged(drawn, change): the drawing with each part passed through
 -- change(field, part), `field` naming where the part sits.
 partsChanged = method(TypicalValue => Rod)
--- transmitted drawn: the drawing as the shell is sent it, its classes gathered
--- in one table that atoms and highlights point into.
+-- transmitted drawn: the drawing as the shell is sent it, every atom and
+-- highlight named by the highlight group it is coloured as.
 transmitted = method(TypicalValue => Rod)
 -- tabulated table: the pairs of a hash table stacked between braces, keys,
 -- arrows and values aligned.
@@ -138,12 +139,10 @@ unfolding = method(TypicalValue => Rod)
 -- is typeset maths, by the typeset, typesetOperands and typewriter settings;
 -- `forced` when a typeset value holds the drawing.
 typesetMarked = method(TypicalValue => Rod)
--- nearestSetting(field, type): the Boolean setting `field` (typeset, …) of the
--- nearest ancestor of `type` that sets it; false given anything but a type.
-nearestSetting = method(TypicalValue => Boolean)
--- configuredDepth(depth, x): the integer setting `depth` (typeDepth or
--- valueDepth) of the nearest ancestor of x's class that sets it.
-configuredDepth = method()
+-- nearestSetting(field, type, kind): the setting `field` (typeset, valueDepth,
+-- highlightGroup, …) of the nearest ancestor of `type` that sets it, a `kind`:
+-- nearestSetting(symbol typeDepth, Module, ZZ) is 2.
+nearestSetting = method()
 -- operand(part, loose): an operand drawn, parenthesized when it is laid out as
 -- one of the classes in `loose`.
 operand = method(TypicalValue => Rod)

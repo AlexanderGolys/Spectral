@@ -2,6 +2,7 @@
 -- positions they come from. None of them is maths, even as an operand.
 
 String.typewriter = true
+String.highlightGroup = "String"
 spelling String := identity
 
 Net.typewriter = true
@@ -23,15 +24,23 @@ rod Time := timed -> grid({{rod timed#1}, {atom("-- " | toString timed#0
 -- An atomic integer is the integer it holds.
 rod AtomicInt := counter -> rod(new ZZ from counter) ++ {symbol Type => AtomicInt}
 Boolean.typewriter = true
+Boolean.highlightGroup = "Boolean"
 Nothing.typewriter = true
+Nothing.highlightGroup = "Builtin"
+
+-- A type, and a package, is coloured as one.
+Type.highlightGroup = "Type"
+Package.highlightGroup = "Package"
 
 -- A name stands for its value.
+Symbol.highlightGroup = "Variable"
 opaque Symbol := name -> (lookup(opaque, Thing)) name ++ {symbol Type => class value name}
 
 -- An indexed variable x_1 is drawn as the subscript it is spelled with.
 rod IndexedVariable := variable -> rod new Subscript from toList variable
 
 -- An operator keyword is coloured as an operator; any other as a keyword.
+Keyword.highlightGroup = "Keyword"
 rod Keyword := keyword -> opaque keyword ++ {
 	Highlight => if operatorAttributes#?keyword then
 			"Operator"
@@ -40,6 +49,8 @@ rod Keyword := keyword -> opaque keyword ++ {
 
 -- A function links to its source.
 Function.typewriter = true
+Function.highlightGroup = "Function"
+Command.highlightGroup = "Macro"
 -- A function, and a command as the function it runs, is spelled by its name, or
 -- shown by its code when it has none, and links to its source.
 named Thing := Boolean => x -> (
@@ -100,6 +111,7 @@ spelling FilePosition := position -> concatenate(
 	if #position > 3 then
 		("-", toString position#3, ":", toString position#4) else ""
 )
+FilePosition.highlightGroup = "MarkupLink"
 rod FilePosition := position -> opaque position ++ {
 	symbol Text => spelling position,
 	Target => sourceTarget position

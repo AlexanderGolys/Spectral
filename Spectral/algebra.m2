@@ -2,20 +2,25 @@
 -- All of it is typeset maths.
 
 Number.typeset = true
+Number.highlightGroup = "Number"
 rod InexactNumber := opaque
 
 RingElement.typeset = true
+RingElement.highlightGroup = "Variable"
 
 -- A ring is drawn by its name, with its own TeX; unnamed past the value depth it
 -- is R.
 Ring.typeset = true
+Ring.highlightGroup = "Type"
 placeholder Ring := String => x -> "R"
 opaque Ring := x -> (lookup(opaque, Thing)) x ++ {Tex => texMath x}
 
 RingFamily.typeset = true
+RingFamily.highlightGroup = "Type"
 opaque RingFamily := lookup(opaque, Ring)
 
 -- A functor such as OO or HH is drawn by its name, with its own TeX.
+ScriptedFunctor.highlightGroup = "Function"
 opaque ScriptedFunctor := lookup(opaque, Ring)
 
 -- A ring is over what it is built from.

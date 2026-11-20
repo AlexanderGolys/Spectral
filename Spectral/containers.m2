@@ -15,6 +15,7 @@ rod AngleBarList := items -> contentsOf(items, items -> fence("⟨", "⟩", row 
 	joined(apply(toList items, rod), ", ", "Delimiter"),
 	atom("|", "Punctuation")
 }))
+Option.highlightGroup = "Option"
 rod Option := pair -> contentsOf(pair, pair -> joined({optionKey pair#0,
 	rod pair#1}, " => ", "Operator"))
 

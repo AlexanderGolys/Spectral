@@ -2,6 +2,7 @@
 -- which is over its variety.
 
 Variety.typeset = true
+Variety.highlightGroup = "Variable"
 placeholder Variety := String => x -> "X"
 parameters Variety := x -> {ring x}
 

@@ -63,8 +63,8 @@ Node
       base, a Diagram of pieces joined by arrows, or a Tree. Each shape has a
       constructor, listed under @TO atom@, and any node may carry the
       attributes listed under @TO Highlight@. The shell is sent the tree with
-      the classes its atoms are coloured by gathered in one table; the value
-      itself is never sent.
+      each atom named by the highlight group of its class, see
+      @TO highlightGroup@; the value itself is never sent.
     Example
       R = QQ[x, y];
       speek'(2, (x + 1)/2)
@@ -159,6 +159,24 @@ Node
       setting in the type ancestry controls specType; subclasses may override it.
       Thing.typeDepth is 1 and Module.typeDepth is 2. Settings may be assigned
       in the shell's init file. Explicit specType' calls use their supplied depth.
+Node
+  Key
+    highlightGroup
+  Headline
+    choose the colour a class is drawn in
+  Description
+    Text
+      Assign the name of one of the shell's highlight groups to a type's
+      highlightGroup field; the nearest setting in the type's ancestry
+      applies, to an atom of the type and to a Highlight naming it. An atom
+      or a Highlight given a string rather than a type names its group
+      directly, as atom("+", "Operator") does. Thing.highlightGroup is "Text";
+      Number is "Number", RingElement and Symbol are "Variable", Ring and Type
+      are "Type", String is "String", and Function is "Function".
+    Example
+      Ring.highlightGroup
+      MyRing = new Type of Ring;
+      MyRing.highlightGroup = "Function";
 Node
   Key
     specType

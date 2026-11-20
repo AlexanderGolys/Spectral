@@ -96,21 +96,12 @@ changedIn (VisibleList, Function) := (items, change) -> apply(items,
 partsChanged (Rod, Function) := (node, change) -> new Rod from applyPairs(node,
 	(field, value) -> (field, changedIn(value, part -> change(field, part))))
 
--- The nearest setting of `field` in the ancestry of `type`.
-nearestSetting (Symbol, Type) := (field, type) -> (
-	owner := first select(ancestors type, ancestor -> ancestor#?field);
-	if not instance(owner#field, Boolean) then
-		error(toString field | " must be true or false");
-	owner#field
-)
-nearestSetting (Symbol, Thing) := (field, x) -> false
-
--- The nearest setting of `depth` in the ancestry of x's class.
-configuredDepth (Symbol, Thing) := (depth, x) -> (
-	owner := first select(ancestors class x, ancestor -> ancestor#?depth);
-	if not instance(owner#depth, ZZ) or owner#depth < 0 then
-		error(toString depth | " must be a non-negative integer");
-	owner#depth
+-- The nearest setting of `field` in the ancestry of `type`, which must be a `kind`.
+nearestSetting (Symbol, Type, Type) := (field, type, kind) -> (
+	setting := (first select(ancestors type, ancestor -> ancestor#?field))#field;
+	if not instance(setting, kind) then
+		error(toString field | " must be a " | toString kind);
+	setting
 )
 
 -- Mark each atom whether it is typeset: by the class it is drawn as or the
@@ -123,7 +114,8 @@ typesetMarked (Rod, Boolean) := (node, forced) -> (
 		return partsChanged(node, (field, part) -> typesetMarked(part, forced));
 	classes := apply({Class, symbol Type}, field -> if node#?field then
 				node#field);
-	setting := field -> any(classes, class' -> nearestSetting(field, class'));
+	setting := field -> any(classes, class' -> instance(class', Type)
+			and nearestSetting(field, class', Boolean));
 	mathematical := setting typeset;
 	operator := setting typesetOperands;
 	marked := not setting typewriter and (forced or mathematical or operator);
@@ -163,7 +155,7 @@ contentsOf (Thing, Function) := (container, draw) -> (
 -- Draw x from `shape`, its expression with each parameter spelled in place
 -- given back as the parameter itself, so that it is drawn at the next depth.
 unfolding (Thing, Thing) := (x, shape) -> (
-	unfoldable ?? return rod'(configuredDepth(symbol valueDepth, x), x);
+	unfoldable ?? return rod'(nearestSetting(symbol valueDepth, class x, ZZ), x);
 	name := placeholder x;
 	if name =!= null and unfoldable <= 0 then
 		return atom(name, Symbol) ++ {symbol Type => class x};
@@ -224,6 +216,8 @@ Thing.typewriter = false
 -- A mathematical type is typed by the values it is built over rather than by
 -- the parts of its expression.
 Thing.typedByParameters = false
+-- The shell's highlight group a value of the class is coloured as.
+Thing.highlightGroup = "Text"
 -- Structures whose kind goes by a conventional name are what the value depth
 -- counts: past it an unnamed one keeps only that name.
 placeholder Thing := Nothing => x -> null
@@ -242,14 +236,14 @@ rod Thing := x -> (
 		rod shape#0
 	else unfolding(x, spelledShape(x, shape))
 )
-specType Thing := x -> specType'(configuredDepth(symbol typeDepth, x), x)
+specType Thing := x -> specType'(nearestSetting(symbol typeDepth, class x, ZZ), x)
 -- Each level of a type below the outermost unfolds the values it is built
 -- over, or the parts of its expression, one level further.
 specType' (ZZ, Thing) := (depth, x) -> (
 	shape := expression x;
 	inner := if depth <= 1 then
 			return rod class x
-		else if nearestSetting(symbol typedByParameters, class x) then
+		else if nearestSetting(symbol typedByParameters, class x, Boolean) then
 		apply(parameters x, parameter -> rod'(depth - 2, parameter))
 	else if instance(shape, Expression) and not instance(shape, Holder) then
 		apply(toList shape, part -> specType'(depth - 1,
@@ -273,27 +267,19 @@ speek' (ZZ, Rod) := (depth, node) -> (
 )
 speek Thing := x -> speek'(1, x)
 
--- What the shell is sent for a value or its type: the Rod with each class
--- it is drawn as sent once, in its Classes table, which every atom's Class and
--- every Highlight point into. What only decides the drawing stays behind.
+-- What the shell is sent for a value or its type: the Rod with every atom's
+-- Class and every Highlight named by the highlight group it is coloured as, a
+-- type by its nearest highlightGroup. What only decides the drawing stays behind.
 transmitted Rod := node -> (
-	classes := new MutableHashTable;
-	index := class' -> (
-		if not classes#?class' then
-			classes#class' = #classes;
-		classes#class'
-	);
-	sent := node -> new Rod from join(
-		select(pairs partsChanged(node, (field, part) -> sent part), (field, value) ->
-				not member(field, {Class, symbol Type, Highlight})),
-		if node.Shape === "Atom" then {Class => index node.Class} else {},
-		if node.?Highlight then {Highlight => index node.Highlight} else {}
-	);
-	body := sent node;
-	body ++ {symbol Classes => apply(sort apply(pairs classes, reverse),
-		(position, class') -> if instance(class', Type) then
-				class'
-			else {class'})}
+	group := class' -> if instance(class', Type) then
+			nearestSetting(symbol highlightGroup, class', String)
+		else class';
+	new Rod from join(
+		select(pairs partsChanged(node, (field, part) -> transmitted part),
+			(field, value) -> not member(field, {Class, symbol Type, Highlight})),
+		if node.Shape === "Atom" then {Class => group node.Class} else {},
+		if node.?Highlight then {Highlight => group node.Highlight} else {}
+	)
 )
 drawnAs = x -> transmitted(try typesetMarked(rod x, false)
 		else opaque x) ++ {
