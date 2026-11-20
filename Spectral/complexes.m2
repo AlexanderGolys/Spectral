@@ -4,7 +4,7 @@
 -- A complex is its chain of modules C_i and differentials d_i between zeros.
 typeset Complex := typedByParameters Complex := class' -> true
 valueDepth Complex := class' -> 2
-placeholder Complex := String => x -> "C"
+keepNames Complex
 parameters Complex := x -> {ring x}
 rod Complex := complex -> (
 	if complex == 0 then
@@ -96,7 +96,7 @@ arranged (ComplexMapExpression, Boolean) := (shape, straight) -> (
 -- The matrices, two to each degree, wait one level past the modules.
 typeset ComplexMap := class' -> true
 valueDepth ComplexMap := class' -> 2
-placeholder ComplexMap := String => x -> "f"
+keepNames ComplexMap
 rod ComplexMap := map -> (
 	matrixPart := (name, degree, matrix) -> Intermediate {
 		Subscript {name, degree}, matrix,

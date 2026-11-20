@@ -24,6 +24,7 @@ Node
     Highlight
     specType
     speek
+    keepNames
     UnderExpression
     AlignedExpression
 Node
@@ -118,28 +119,53 @@ Node
     valueDepth
     (valueDepth, Thing)
   Headline
-    control how many unnamed values a drawing unfolds
+    control how far a value's own notation unfolds
   Usage
     valueDepth T
   Description
     Text
       Install valueDepth for a type as a method returning a non-negative
       integer, as valueDepth Complex := class' -> 2 is; the method nearest in
-      the type's ancestry applies. A value is
-      drawn from its expression, and each value unfolded inside another costs
-      one level; the items of a list cost none. Past the depth an unnamed value
-      keeps only a placeholder: R for a ring, M for a module, X for a variety,
-      C for a complex. Named values always keep their name. A complex is a
-      chain of its modules C_i and differentials d_i between zeros; at the
-      next depth these names give way to the modules and matrices, and each
-      further level substitutes one more name. A map of complexes draws its
-      two complexes the same way, but its matrices wait one level longer than
+      the type's ancestry applies. It counts the levels of notation a value
+      introduces for its own parts. A complex is a chain of its modules C_i
+      and differentials d_i between zeros; past depth one these names give
+      way to the modules and matrices. A map of complexes draws its two
+      complexes the same way, but its matrices wait one level longer than
       their modules, so at its default depth of 2 its arrows carry names, and
-      valueDepth ComplexMap := class' -> 3 shows the matrices.
-      Any other value has a depth of 1, and a complex 2. Explicit rod' calls
-      use their supplied depth.
+      valueDepth ComplexMap := class' -> 3 shows the matrices. Any other value
+      has a depth of 1, and a complex 2. Explicit rod' calls use their
+      supplied depth. What a value is built over is drawn whole unless it has
+      a name; see @TO keepNames@.
     Example
       valueDepth Complex
+Node
+  Key
+    keepNames
+    (keepNames, Type)
+  Headline
+    draw the values of a class by the global names they are assigned to
+  Usage
+    keepNames T
+  Description
+    Text
+      From then on a T assigned to a global name with = is drawn by that name
+      inside every other value, as M2 spells a ring by its name; one assigned
+      with := keeps being drawn whole. The value a drawing is of is always
+      spelled out from its definition: I itself is drawn as its generators,
+      and a named ring R = QQ[x] as QQ[x]. A name is forgotten
+      once it is assigned something else. Only drawings change: M2's own net
+      and toString of the value are left as they are. Ideals, modules,
+      matrices, ring maps, complexes, maps of complexes, coherent sheaves and
+      sheaf maps keep their names; a quotient ring by a named ideal is drawn
+      over the ideal's name.
+    Example
+      R = QQ[x, y];
+      I = ideal(x^2, y^3);
+      rod(R/I)
+      J := ideal(x^2);
+      rod(R/J)
+      rod I
+      rod R
 Node
   Key
     typeset

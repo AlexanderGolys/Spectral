@@ -47,7 +47,8 @@ export {
 	"typeset",
 	"typesetOperands",
 	"typewriter",
-	"highlightGroup"
+	"highlightGroup",
+	"keepNames"
 }
 
 -- A drawing, the format string a value is shown by: the expression it lays out
@@ -62,8 +63,8 @@ Rod = new Type of HashTable
 -- lay its expressions out differently.
 -- rod x: x drawn from its expression, each part laid out by its class.
 rod = method(Dispatch => Thing, TypicalValue => Rod)
--- rod'(depth, x): rod x unfolding `depth` unnamed values deep, in
--- place of x's class's valueDepth.
+-- rod'(depth, x): rod x unfolding `depth` levels of its notation, in place of
+-- x's class's valueDepth.
 rod' = method(TypicalValue => Rod)
 -- specType x: the type annotation shown beside x, as detailed as its class's
 -- typeDepth: 1/2 is QQ, and R^2, a module of typeDepth 2, is Module[R].
@@ -137,8 +138,12 @@ spelling = method(Dispatch => Thing, TypicalValue => String)
 -- is drawn opaque rather than endlessly.
 contentsOf = method(TypicalValue => Rod)
 -- unfolding(x, shape): x drawn from its expression `shape`, its parameters
--- drawn as themselves at the next depth. An unnamed x with a placeholder costs
--- one level, and past the value depth is drawn as the placeholder alone.
+-- drawn as themselves; inside another drawing, x drawn by its name when it has
+-- one (see keepNames).
+-- drawnWithin(depth, x, draw): draw() run inside the drawing of x, unfolding
+-- `depth` levels; a drawing inside none is the drawing of x, the one value
+-- spelled out from its definition rather than by its name.
+drawnWithin = method()
 unfolding = method(TypicalValue => Rod)
 -- typesetMarked(drawn, forced): the drawing with every atom marked whether it
 -- is typeset maths, by the typeset, typesetOperands and typewriter settings;
@@ -159,7 +164,8 @@ arranged = method(TypicalValue => Rod)
 -- method is: install `highlightGroup Gene := class' -> "Keyword"` to change one.
 -- typeDepth T: how many levels of a T's type its annotation shows.
 typeDepth = method(Dispatch => Type, TypicalValue => ZZ)
--- valueDepth T: how many unnamed values a drawing of a T unfolds.
+-- valueDepth T: how many levels of its own notation a T unfolds: a complex
+-- names its modules C_i and differentials d_i until it unfolds more than one.
 valueDepth = method(Dispatch => Type, TypicalValue => ZZ)
 -- typeset T: whether a T is set as typeset maths.
 typeset = method(Dispatch => Type, TypicalValue => Boolean)
@@ -173,10 +179,22 @@ typedByParameters = method(Dispatch => Type, TypicalValue => Boolean)
 -- highlightGroup T: the shell's highlight group a T is coloured as.
 highlightGroup = method(Dispatch => Type, TypicalValue => String)
 
+-- keepNames T: a T assigned to a global name is from then on drawn by that
+-- name inside other values, as M2 spells a ring: after keepNames Ideal and
+-- I = ideal(x^2), S/I is drawn as S/I, while J := ideal(x^2) leaves S/J
+-- drawn as S/(x^2). A drawing of I itself still spells it out.
+keepNames = method(TypicalValue => Nothing)
+-- globalName x: the name a kept x was last assigned to, null when none.
+globalName = method(Dispatch => Thing)
+
 -- Hooks a class's block installs to say how its values are drawn.
--- placeholder x: the conventional name an unnamed x keeps past the value depth
--- (R for a ring, M for a module, …); null when x is always drawn whole.
-placeholder = method(Dispatch => Thing)
+-- definition x: the expression x stands for, spelled out though x has a name:
+-- QQ[x] for R = QQ[x], whose expression is R. The value a drawing is of is
+-- drawn from its definition, everything inside it from its expression.
+definition = method(Dispatch => Thing)
+-- optionsDropped e: the expression without the options its arrays list, each
+-- a `=>` operation: QQ[x, Degrees => {1}] is QQ[x].
+optionsDropped = method(Dispatch => Thing)
 -- parameters x: the values x is built over, which its expression spells in
 -- place and a typedByParameters type lists: a module's is {its ring}.
 parameters = method(Dispatch => Thing, TypicalValue => List)

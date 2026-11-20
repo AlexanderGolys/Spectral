@@ -3,17 +3,15 @@
 
 typeset Variety := class' -> true
 highlightGroup Variety := class' -> "Variable"
-placeholder Variety := String => x -> "X"
 parameters Variety := x -> {ring x}
 
--- A sheaf of rings is always drawn whole, M2 spelling it over its variety.
+-- A sheaf of rings is spelled by M2 over its variety.
 typeset SheafOfRings := typedByParameters SheafOfRings := class' -> true
-placeholder SheafOfRings := Nothing => x -> null
 parameters SheafOfRings := x -> {variety x}
 
 -- A sheaf's rank is an index on it, as in OO_X^2, spelled as a module's is.
 typeset CoherentSheaf := typedByParameters CoherentSheaf := class' -> true
-placeholder CoherentSheaf := String => x -> "F"
+keepNames CoherentSheaf
 parameters CoherentSheaf := x -> {ring x}
 spelledShape (CoherentSheaf, Expression) := lookup(spelledShape, Module, Expression)
 
@@ -22,4 +20,5 @@ spelledShape (CoherentSheaf, Expression) := lookup(spelledShape, Module, Express
 typeset SheafMap := class' -> true
 typeDepth SheafMap := class' -> 3
 typedByParameters SheafMap := class' -> true
+keepNames SheafMap
 parameters SheafMap := f -> {MapExpression {f.target, f.source}}

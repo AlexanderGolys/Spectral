@@ -166,16 +166,54 @@ typesetMarked (Rod, Boolean) := (node, forced) -> (
 
 -- Values being drawn: a container that holds itself is drawn once.
 beingDrawn := new MutableList
--- How many more values may be unfolded inside the one being drawn; unset
--- outside a drawing.
+-- How many levels of notation the value being drawn unfolds, and that value,
+-- which alone is spelled out from its definition though it has a name; both
+-- unset outside a drawing.
 unfoldable := null
+outermost := null
 -- Clear what a drawing that threw part-way left behind, so the next drawing
 -- starts outside any; the shell calls it after every result.
-forgetDrawing = () -> (beingDrawn = new MutableList; unfoldable = null)
+forgetDrawing = () -> (
+	beingDrawn = new MutableList;
+	(unfoldable, outermost) = (null, null)
+)
+drawnWithin (ZZ, Thing, Function) := (depth, x, draw) -> (
+	(outer, spelled) := (unfoldable, outermost);
+	if outer === null then
+		outermost = x;
+	unfoldable = depth;
+	result := draw();
+	(unfoldable, outermost) = (outer, spelled);
+	result
+)
+
+-- The global name each value of a class keeping names was last assigned to,
+-- which it is drawn by from then on, as M2 spells a ring by its name: `=` hides
+-- a value behind its name, `:=` keeps it spelled out. A name is forgotten when
+-- it is assigned something else.
+globalNames := new MutableHashTable
+keepNames Type := class' -> (
+	(assigned, released) := (lookup(GlobalAssignHook, class'),
+		lookup(GlobalReleaseHook, class'));
+	class'.GlobalAssignHook = (name, x) -> (
+		if assigned =!= null then
+			assigned(name, x);
+		if not globalNames#?x then
+			globalNames#x = name
+	);
+	class'.GlobalReleaseHook = (name, x) -> (
+		if released =!= null then
+			released(name, x);
+		if globalNames#?x and globalNames#x === name then
+			remove(globalNames, x)
+	);
+)
+globalName Thing := x -> if globalNames#?x then globalNames#x
 
 -- A container drawn by `draw`, at the container's own depth; a container
 -- already being drawn, which holds itself, is drawn opaque.
 contentsOf (Thing, Function) := (container, draw) -> (
+	unfoldable ?? return rod'(valueDepth class container, container);
 	if any(toList beingDrawn, ancestor -> ancestor === container) then
 		return opaque container;
 	beingDrawn#(#beingDrawn) = container;
@@ -188,12 +226,14 @@ contentsOf (Thing, Function) := (container, draw) -> (
 )
 
 -- Draw x from `shape`, its expression with each parameter spelled in place
--- given back as the parameter itself, so that it is drawn at the next depth.
+-- given back as the parameter itself, so that it is drawn in its turn; a named
+-- x is drawn by its name.
 unfolding (Thing, Thing) := (x, shape) -> (
 	unfoldable ?? return rod'(valueDepth class x, x);
-	name := placeholder x;
-	if name =!= null and unfoldable <= 0 then
-		return atom(name, Symbol) ++ {symbol Type => class x};
+	name := if x =!= outermost then
+			globalName x;
+	if name =!= null then
+		return rod name;
 	held := fold((drawn, parameter) -> (
 		spelled := expression parameter;
 		substituted := part -> if part === spelled then
@@ -203,32 +243,21 @@ unfolding (Thing, Thing) := (x, shape) -> (
 		else part;
 		substituted drawn
 	), shape, parameters x);
-	if name =!= null then
-		unfoldable -= 1;
-	result := rod held ++ {symbol Type => class x};
-	if name =!= null then
-		unfoldable += 1;
-	result
+	rod held ++ {symbol Type => class x}
 )
 
-rod' (ZZ, Thing) := (depth, x) -> (
-	outer := unfoldable;
-	unfoldable = depth;
-	result := rod x;
-	unfoldable = outer;
-	result
-)
+rod' (ZZ, Thing) := (depth, x) -> drawnWithin(depth, x, () -> rod x)
 
 -- A part a drawing introduces for a structure, as {name, part, shape} or
--- {name, part, shape, level}: spelled by its name until the drawing has that
--- many levels left to unfold (one by default), then drawn from its shape.
+-- {name, part, shape, level}: spelled by its name until the drawing unfolds
+-- more levels than that (one by default), then drawn from its shape.
 Intermediate = new HeaderType of Expression
 rod Intermediate := part -> (
 	(name, component, shape) := toSequence take(part, 3);
 	level := if #part > 3 then
 			part#3
 		else 1;
-	if unfoldable =!= null and unfoldable < level then
+	if unfoldable =!= null and unfoldable <= level then
 		rod name ++ {symbol Type => class component}
 	else rod shape ++ {symbol Type => class component}
 )
@@ -251,25 +280,32 @@ typewriter Thing := class' -> false
 -- the parts of its expression.
 typedByParameters Thing := class' -> false
 highlightGroup Thing := class' -> "Text"
--- Structures whose kind goes by a conventional name are what the value depth
--- counts: past it an unnamed one keeps only that name.
-placeholder Thing := Nothing => x -> null
 -- The values a structure is built over, which its expression spells in place.
 parameters Thing := x -> {}
 -- What a value is drawn from.
 spelledShape (Thing, Thing) := (x, shape) -> shape
+definition Thing := expression
+optionsDropped Thing := identity
+optionsDropped Expression := shape -> apply(shape, optionsDropped)
+optionsDropped Array := items -> new Array from apply(select(toList items, item ->
+		not (instance(item, BinaryOperation) and item#0 === symbol =>)),
+	optionsDropped)
 -- Values whose expression holds nothing but themselves.
 opaque Thing := x -> atom(spelling x, class x) ++ {symbol Type => class x}
 spelling Thing := x -> try toString x else toString class x
 rod Thing := x -> (
-	shape := expression x;
+	unfoldable ?? return rod'(valueDepth class x, x);
+	shape := if x === outermost then
+			definition x
+		else expression x;
 	if instance(shape, Holder) and shape#0 === x then
 		opaque x
 	else if instance(shape, Holder) and instance(shape#0, Symbol) then
 		rod shape#0
 	else unfolding(x, spelledShape(x, shape))
 )
-specType Thing := x -> specType'(typeDepth class x, x)
+specType Thing := x -> drawnWithin(valueDepth class x, x, () ->
+		specType'(typeDepth class x, x))
 -- Each level of a type below the outermost unfolds the values it is built
 -- over, or the parts of its expression, one level further.
 specType' (ZZ, Thing) := (depth, x) -> (

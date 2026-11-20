@@ -8,12 +8,16 @@ rod InexactNumber := opaque
 typeset RingElement := class' -> true
 highlightGroup RingElement := class' -> "Variable"
 
--- A ring is drawn by its name, with its own TeX; unnamed past the value depth it
--- is R.
+-- A ring is drawn by its name, with its own TeX, and unnamed by what M2 spells
+-- it from.
 typeset Ring := class' -> true
 highlightGroup Ring := class' -> "Type"
-placeholder Ring := String => x -> "R"
 opaque Ring := x -> (lookup(opaque, Thing)) x ++ {Tex => texMath x}
+-- A ring is defined by its description, spelled as M2 spells an unnamed ring,
+-- without the options only a description lists; a fraction field over the
+-- ring it is the field of, which its description spells out in full.
+definition Ring := R -> optionsDropped expression (describe R)#0
+definition FractionField := F -> (expression frac) expression last F.baseRings
 
 typeset RingFamily := class' -> true
 highlightGroup RingFamily := class' -> "Type"
@@ -25,10 +29,17 @@ opaque ScriptedFunctor := lookup(opaque, Ring)
 
 -- A ring is over what it is built from.
 parameters QuotientRing := List => x -> {ambient x}
+-- M2 spells a quotient ring over its relations, which name no ideal; one
+-- whose ideal has a name is drawn over that name.
+spelledShape (QuotientRing, Divide) := (x, shape) -> (
+	if globalName ideal x =!= null then
+		Divide {shape#0, Holder {ideal x}}
+	else shape
+)
 parameters PolynomialRing := List => x -> {coefficientRing x}
 
 typeset Ideal := typedByParameters Ideal := class' -> true
-placeholder Ideal := String => x -> "I"
+keepNames Ideal
 parameters Ideal := List => x -> {ring x}
 
 -- A module is over its ring. Its rank is an index on it, as in R^2, rather than
@@ -36,7 +47,7 @@ parameters Ideal := List => x -> {ring x}
 -- tells apart from the base.
 typeset Module := typedByParameters Module := class' -> true
 typeDepth Module := class' -> 2
-placeholder Module := String => x -> "M"
+keepNames Module
 parameters Module := List => x -> {ring x}
 spelledShape (Module, Expression) := (x, shape) -> (
 	if instance(shape, Superscript) and instance(shape#1, OneExpression) then
@@ -50,9 +61,11 @@ spelledShape (Module, Expression) := (x, shape) -> (
 -- Its parameters are modules, a level below a module's ring.
 typeset Matrix := typedByParameters Matrix := class' -> true
 typeDepth Matrix := class' -> 3
+keepNames Matrix
 parameters Matrix := List => f -> {MapExpression {f.target, f.source}}
 
 typeset RingMap := class' -> true
+keepNames RingMap
 
 -- A mutable matrix is drawn as a matrix is, without the mark M2 spells it apart by.
 typeset MutableMatrix := class' -> true
