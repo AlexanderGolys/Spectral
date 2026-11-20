@@ -2,9 +2,8 @@
 -- rather than only by their names.
 
 -- A complex is its chain of modules C_i and differentials d_i between zeros.
-Complex.typeset = true
-Complex.valueDepth = 2
-Complex.typedByParameters = true
+typeset Complex := typedByParameters Complex := class' -> true
+valueDepth Complex := class' -> 2
 placeholder Complex := String => x -> "C"
 parameters Complex := x -> {ring x}
 rod Complex := complex -> (
@@ -95,8 +94,8 @@ arranged (ComplexMapExpression, Boolean) := (shape, straight) -> (
 -- map's degree: straight down for a chain map, one column for a differential.
 -- A slanting component has no room beside it for a matrix, only its name.
 -- The matrices, two to each degree, wait one level past the modules.
-ComplexMap.typeset = true
-ComplexMap.valueDepth = 2
+typeset ComplexMap := class' -> true
+valueDepth ComplexMap := class' -> 2
 placeholder ComplexMap := String => x -> "f"
 rod ComplexMap := map -> (
 	matrixPart := (name, degree, matrix) -> Intermediate {

@@ -10,10 +10,13 @@ Node
       formula, each atom coloured by its class. @TO specType@ lays out the type
       of a value the same way. Both are what the
       @HREF{"https://github.com/AlexanderGolys/spectral-m2", "spectral-m2"}@
-      shell draws its results from, and work on their own: @TO speek@ shows the
-      tree a value is drawn as.
+      shell draws its results from, and work on their own: a @TO Rod@ prints as
+      the text it lays out. @TO speek@ inspects a value as @TO peek@ does, its
+      class and what it holds, drawn.
     Example
-      speek(1/2)
+      R = QQ[x, y];
+      rod((x + 1)/2)
+      speek {1, 1/2, x}
   Subnodes
     Rod
     rod
@@ -57,6 +60,9 @@ Node
     a value laid out as a tree of shapes
   Description
     Text
+      A Rod is the format string a value is shown by: the expression it lays
+      out, each part keeping its colour, whether it is typeset and its own TeX.
+      M2 prints a Rod as the text it lays out; @TO speek@ shows its fields.
       A Rod is one node of a layout, its parts in fields named by its
       shape: an Atom of text in the colour of its class, a Row or a Join of
       items, a Script, a Fraction, a Fence, a Grid, a label Over or Under a
@@ -67,7 +73,8 @@ Node
       @TO highlightGroup@; the value itself is never sent.
     Example
       R = QQ[x, y];
-      speek'(2, (x + 1)/2)
+      rod((x + 1)/2)
+      speek rod(1/2)
 Node
   Key
     rod
@@ -92,7 +99,7 @@ Node
     Example
       R = QQ[x, y];
       formatted Sum := s -> joined(apply(toList s, rod), " (+) ", "Operator");
-      speek'(2, x + y)
+      rod(x + y)
 Node
   Key
     formatted
@@ -109,11 +116,16 @@ Node
 Node
   Key
     valueDepth
+    (valueDepth, Thing)
   Headline
     control how many unnamed values a drawing unfolds
+  Usage
+    valueDepth T
   Description
     Text
-      Assign a non-negative integer to a type's valueDepth field. A value is
+      Install valueDepth for a type as a method returning a non-negative
+      integer, as valueDepth Complex := class' -> 2 is; the method nearest in
+      the type's ancestry applies. A value is
       drawn from its expression, and each value unfolded inside another costs
       one level; the items of a list cost none. Past the depth an unnamed value
       keeps only a placeholder: R for a ring, M for a module, X for a variety,
@@ -123,20 +135,30 @@ Node
       further level substitutes one more name. A map of complexes draws its
       two complexes the same way, but its matrices wait one level longer than
       their modules, so at its default depth of 2 its arrows carry names, and
-      ComplexMap.valueDepth = 3 shows the matrices.
-      Thing.valueDepth is 1 and Complex.valueDepth is 2. Explicit rod'
-      calls use their supplied depth.
+      valueDepth ComplexMap := class' -> 3 shows the matrices.
+      Any other value has a depth of 1, and a complex 2. Explicit rod' calls
+      use their supplied depth.
+    Example
+      valueDepth Complex
 Node
   Key
     typeset
+    (typeset, Thing)
     typesetOperands
+    (typesetOperands, Thing)
     typewriter
+    (typewriter, Thing)
   Headline
     choose which values are set as typeset maths
+  Usage
+    typeset T
+    typesetOperands T
+    typewriter T
   Description
     Text
-      Assign true or false to these fields of a type; the nearest setting in
-      the type's ancestry applies. A value is drawn as a typeset picture only
+      Install these for a type as methods returning true or false, as
+      typeset Number := class' -> true is; the method nearest in the type's
+      ancestry applies. A value is drawn as a typeset picture only
       when some part of it is typeset, and the rest of the picture keeps a
       typewriter face. A part is typeset when its class, or the class of the
       value it stands for, has typeset true, or when it is held by such a
@@ -148,35 +170,47 @@ Node
       operator expressions have typesetOperands true, so a symbol in a sum is
       set as maths; MatrixExpression, VectorExpression and Table only hold
       their entries. String, Net, Boolean, Nothing and Function have typewriter true.
+    Example
+      {typeset QQ, typesetOperands Sum, typewriter String}
 Node
   Key
     typeDepth
+    (typeDepth, Thing)
   Headline
     control the detail in a type annotation
+  Usage
+    typeDepth T
   Description
     Text
-      Assign a non-negative integer to a type's typeDepth field. The nearest
-      setting in the type ancestry controls specType; subclasses may override it.
-      Thing.typeDepth is 1 and Module.typeDepth is 2. Settings may be assigned
-      in the shell's init file. Explicit specType' calls use their supplied depth.
+      Install typeDepth for a type as a method returning a non-negative
+      integer; the method nearest in the type's ancestry controls specType,
+      and subclasses may override it. Any value has a depth of 1, a module 2.
+      Install it in the shell's init file to change it for every session.
+      Explicit specType' calls use their supplied depth.
+    Example
+      typeDepth Module
 Node
   Key
     highlightGroup
+    (highlightGroup, Thing)
   Headline
     choose the colour a class is drawn in
+  Usage
+    highlightGroup T
   Description
     Text
-      Assign the name of one of the shell's highlight groups to a type's
-      highlightGroup field; the nearest setting in the type's ancestry
-      applies, to an atom of the type and to a Highlight naming it. An atom
+      Install highlightGroup for a type as a method returning the name of one
+      of the shell's highlight groups; the method nearest in the type's
+      ancestry applies, to an atom of the type and to a Highlight naming it. An atom
       or a Highlight given a string rather than a type names its group
-      directly, as atom("+", "Operator") does. Thing.highlightGroup is "Text";
-      Number is "Number", RingElement and Symbol are "Variable", Ring and Type
+      directly, as atom("+", "Operator") does. Any class is "Text" unless it
+      says otherwise: Number is "Number", RingElement and Symbol are "Variable", Ring and Type
       are "Type", String is "String", and Function is "Function".
     Example
-      Ring.highlightGroup
+      highlightGroup Ring
       MyRing = new Type of Ring;
-      MyRing.highlightGroup = "Function";
+      highlightGroup MyRing := class' -> "Function";
+      highlightGroup MyRing
 Node
   Key
     specType
@@ -191,9 +225,9 @@ Node
   Description
     Text
       Receives the original value. The depth is a non-negative integer.
-      specType uses the nearest typeDepth setting in the type's ancestry.
-      Thing.typeDepth is 1; Module.typeDepth is 2. Assign these parameters
-      in the shell or its init file. Explicit specType' calls override them.
+      specType x shows as many levels as the @TO typeDepth@ of x's class: 1
+      for most values, 2 for a module. Install typeDepth in the shell or its
+      init file to change it. Explicit specType' calls override it.
       Modules and matrices use their base ring as a parameter; coherent
       sheaves and sheaf maps use the sheaf of rings they are modules over, and
       a sheaf of rings uses its variety. Each further level unfolds an unnamed
@@ -207,17 +241,25 @@ Node
     (speek, Thing)
     speek'
     (speek', ZZ, Thing)
+    (speek', ZZ, BasicList)
+    (speek', ZZ, HashTable)
   Headline
-    the tree a value is drawn as, as peek shows an object
+    inspect a value as peek does, drawn
   Usage
     speek x
     speek'(depth, x)
   Description
     Text
-      Each node is spelled by its shape with its parts in braces, each atom by
-      its text and class, to the given depth, one level by default.
+      The analogue of @TO peek@, a @TO Rod@ rather than a net: a list or an
+      expression is its class over its entries, a hash table its class, its
+      parent when it has one, and its pairs, sorted as peek sorts them. Each
+      entry is inspected one level less deep; past the depth, one level by
+      default, and for anything else, a value is drawn as itself. A Rod is a
+      hash table too, so speek shows the fields a drawing is made of.
     Example
-      speek'(3, matrix{{1, 2}})
+      speek {1, 1/2, {2}}
+      speek'(2, {1, 1/2, {2}})
+      speek rod(1/2)
 Node
   Key
     atom
@@ -268,7 +310,7 @@ Node
       whether a drawing is laid out as an expression class.
     Example
       R = QQ[x, y];
-      speek'(2, script(atom("x", Symbol), rod 1, rod 2))
+      script(atom("x", Symbol), rod 1, rod 2)
       drawsAs(rod(x + 1), Sum)
 Node
   Key
@@ -287,5 +329,5 @@ Node
     Example
       R = QQ[x, y];
       rod Ideal := I -> (lookup(rod, Thing)) I ++ {Highlight => Keyword, Reach => 1};
-      speek ideal(x, y)
+      speek rod ideal(x, y)
 ///

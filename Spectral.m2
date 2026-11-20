@@ -2,7 +2,7 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "0.3.0",
+	Version => "0.4.0",
 	Date => "November 20, 2026",
 	Headline => "drawing values as structured, typed trees",
 	PackageImports => {"Complexes", "Varieties", "Text"},
@@ -50,9 +50,11 @@ export {
 	"highlightGroup"
 }
 
--- A drawing: one shaped node of a tree laid out as TeX lays out a formula, its
--- parts in named fields; Spectral/Rod.m2 lists the shapes.
--- 1/2 is Fraction{Atom{"1", ZZ}, Atom{"2", ZZ}}.
+-- A drawing, the format string a value is shown by: the expression it lays out
+-- as a tree of shaped nodes, as TeX lays out a formula, each part keeping how it
+-- is drawn (its colour, whether it is typeset, its own TeX), in named fields
+-- that serialise as they are; Spectral/Rod.m2 lists the shapes.
+-- rod(1/2) is Rod{Shape => "Fraction", Numerator => rod 1, …}, printed as 1/2.
 Rod = new Type of HashTable
 
 -- The public drawing, what the shell shows a value as. Install rod for a
@@ -68,11 +70,12 @@ rod' = method(TypicalValue => Rod)
 specType = method(Dispatch => Thing, TypicalValue => Rod)
 -- specType'(depth, x): specType x at an explicit depth.
 specType' = method(TypicalValue => Rod)
--- speek x: the drawing of x one level deep, as peek shows an object:
--- speek(1/2) is Fraction{Atom{"1", ZZ}, Atom{"2", ZZ}}.
-speek = method(Dispatch => Thing, TypicalValue => String)
--- speek'(depth, x): speek x to an explicit depth.
-speek' = method(TypicalValue => String)
+-- speek x: x inspected as peek inspects it, drawn: its class and what it holds,
+-- each part drawn as itself. speek{1/2} reads List{1/2}, and speek of a ring
+-- its class with the pairs of its table.
+speek = method(Dispatch => Thing, TypicalValue => Rod)
+-- speek'(depth, x): speek x unfolding `depth` levels of containers, as peek'.
+speek' = method(TypicalValue => Rod)
 -- formatted e: an expression laid out as its class lays it out, before it is
 -- marked with that class.
 formatted = method(Dispatch => Thing, TypicalValue => Rod)
@@ -118,9 +121,11 @@ changedIn = method()
 partsChanged = method(TypicalValue => Rod)
 -- transmitted drawn: the drawing as the shell is sent it, every atom and
 -- highlight named by the highlight group it is coloured as.
+-- transmitted(draw, x, fallback): draw x so, typeset where it should be, or
+-- the fallback drawn opaque when drawing throws.
 transmitted = method(TypicalValue => Rod)
 -- tabulated table: the pairs of a hash table stacked between braces, keys,
--- arrows and values aligned.
+-- arrows and values aligned; tabulated pairs does so for pairs already drawn.
 tabulated = method(Dispatch => Thing, TypicalValue => Rod)
 -- opaque x: x as an atom of its own class, spelled by its text (see spelling).
 -- Used for values whose expression holds nothing but themselves.
@@ -139,10 +144,6 @@ unfolding = method(TypicalValue => Rod)
 -- is typeset maths, by the typeset, typesetOperands and typewriter settings;
 -- `forced` when a typeset value holds the drawing.
 typesetMarked = method(TypicalValue => Rod)
--- nearestSetting(field, type, kind): the setting `field` (typeset, valueDepth,
--- highlightGroup, …) of the nearest ancestor of `type` that sets it, a `kind`:
--- nearestSetting(symbol typeDepth, Module, ZZ) is 2.
-nearestSetting = method()
 -- operand(part, loose): an operand drawn, parenthesized when it is laid out as
 -- one of the classes in `loose`.
 operand = method(TypicalValue => Rod)
@@ -152,6 +153,25 @@ stacked = method(TypicalValue => Rod)
 -- arranged(e, straight): the diagram of a ComplexMapExpression e, its target
 -- under its source by degree, or shifted under the components when straight.
 arranged = method(TypicalValue => Rod)
+
+-- Settings: what a class says of how its values are drawn, each a method of the
+-- class itself returning a constant, found up the class's ancestry as any
+-- method is: install `highlightGroup Gene := class' -> "Keyword"` to change one.
+-- typeDepth T: how many levels of a T's type its annotation shows.
+typeDepth = method(Dispatch => Type, TypicalValue => ZZ)
+-- valueDepth T: how many unnamed values a drawing of a T unfolds.
+valueDepth = method(Dispatch => Type, TypicalValue => ZZ)
+-- typeset T: whether a T is set as typeset maths.
+typeset = method(Dispatch => Type, TypicalValue => Boolean)
+-- typesetOperands T: whether a T, an operator, sets its operands as maths.
+typesetOperands = method(Dispatch => Type, TypicalValue => Boolean)
+-- typewriter T: whether a T keeps a typewriter face even as an operand.
+typewriter = method(Dispatch => Type, TypicalValue => Boolean)
+-- typedByParameters T: whether a T's type lists the values it is built over
+-- rather than the parts of its expression.
+typedByParameters = method(Dispatch => Type, TypicalValue => Boolean)
+-- highlightGroup T: the shell's highlight group a T is coloured as.
+highlightGroup = method(Dispatch => Type, TypicalValue => String)
 
 -- Hooks a class's block installs to say how its values are drawn.
 -- placeholder x: the conventional name an unnamed x keeps past the value depth

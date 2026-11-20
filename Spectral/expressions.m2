@@ -28,7 +28,7 @@ space := atom(" ", "Canvas")
 
 -- A sum is its terms between plus signs, each negative term's minus sign
 -- standing in for one; the empty sum is 0.
-AssociativeExpression.typesetOperands = true
+typesetOperands AssociativeExpression := class' -> true
 formatted Sum := sum -> (
 	if #sum == 0 then
 		return rod 0;
@@ -41,7 +41,7 @@ scan({(Product, "·"), (TensorProduct, "⊗"), (DirectSum, "⊕"), (Equation, " 
 	(class', sign) -> formatted class' := factors -> joined(apply(toList factors,
 		factor -> operand(factor, looseOperand)), sign, "Operator"))
 
-Minus.typesetOperands = true
+typesetOperands Minus := class' -> true
 formatted Minus := minus -> row {atom("-", "Operator"), operand(minus#0, looseOperand)}
 
 formatted RowExpression := formatted SheafExpression := shape -> row apply(
@@ -51,34 +51,30 @@ formatted RowExpression := formatted SheafExpression := shape -> row apply(
 -- frac R, cokernel M: a function applied by juxtaposition, a space between it
 -- and its argument, which a bracketed one follows directly, as in R[x] and
 -- OO_X(1).
-Adjacent.typesetOperands = true
+typesetOperands Adjacent := class' -> true
 formatted Adjacent := application -> row join({rod application#0},
 	if instance(application#1, Array) or instance(application#1, Parenthesize) then
 		{} else {space},
 	{operand(application#1, looseBase)})
 
-Parenthesize.typesetOperands = true
+typesetOperands Parenthesize := class' -> true
 rod Parenthesize := lookup(rod, Expression)
 formatted Parenthesize := held -> parenthesized rod held#0
 
-ZeroExpression.typeset = true
-OneExpression.typeset = true
+typeset ZeroExpression := class' -> true
+typeset OneExpression := class' -> true
 
-Divide.typeset = true
-Divide.typesetOperands = true
+typeset Divide := typesetOperands Divide := class' -> true
 formatted Divide := quotient -> fraction(rod quotient#0, rod quotient#1)
 
 -- A power raises its exponent over its base, as a superscript does.
-Power.typeset = true
-Power.typesetOperands = true
-Superscript.typeset = true
-Superscript.typesetOperands = true
+typeset Power := typesetOperands Power := class' -> true
+typeset Superscript := typesetOperands Superscript := class' -> true
 formatted Power := formatted Superscript := power -> script(operand(power#0, looseBase),
 	null, rod power#1)
 
 -- A subscript lowers its index, a sequence of indices spelled with commas.
-Subscript.typeset = true
-Subscript.typesetOperands = true
+typeset Subscript := typesetOperands Subscript := class' -> true
 formatted Subscript := indexed -> script(operand(indexed#0, looseOperand),
 	if instance(indexed#1, Sequence) then
 		joined(apply(toList indexed#1, rod), ",", "Delimiter")
@@ -92,8 +88,7 @@ formatted FunctionApplication := application -> row {rod application#0,
 
 -- A map is target ⟵ source, its label over the arrow; a chain of maps is one
 -- row, so a chain too wide breaks between its maps.
-MapExpression.typeset = true
-MapExpression.typesetOperands = true
+typeset MapExpression := typesetOperands MapExpression := class' -> true
 formatted MapExpression := map -> (
 	arrow := atom("⟵", "MapArrow");
 	target := rod map#0;
@@ -110,15 +105,14 @@ formatted MapExpression := map -> (
 -- UnderExpression{base, label}: a label centred beneath an expression, keeping
 -- the expression's baseline; a complex sets each module's degree under it.
 UnderExpression = new HeaderType of Expression
-UnderExpression.typeset = true
-UnderExpression.typesetOperands = true
+typeset UnderExpression := typesetOperands UnderExpression := class' -> true
 formatted UnderExpression := under -> labelled("Under", rod under#0, rod under#1)
 
 -- `key => entry` and the other binary operators, spaced apart, but for the
 -- tensor product and tensor power, set as products and powers are. The key
 -- before `=>` is coloured as an option's name is in code when it is spelled by
 -- a name or a string, whatever builds the pair.
-BinaryOperation.typesetOperands = true
+typesetOperands BinaryOperation := class' -> true
 formatted BinaryOperation := operation -> (
 	(operator, left, right) := toSequence operation;
 	if operator === symbol ^** then

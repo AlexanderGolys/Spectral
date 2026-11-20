@@ -15,7 +15,7 @@ rod AngleBarList := items -> contentsOf(items, items -> fence("⟨", "⟩", row 
 	joined(apply(toList items, rod), ", ", "Delimiter"),
 	atom("|", "Punctuation")
 }))
-Option.highlightGroup = "Option"
+highlightGroup Option := class' -> "Option"
 rod Option := pair -> contentsOf(pair, pair -> joined({optionKey pair#0,
 	rod pair#1}, " => ", "Operator"))
 
@@ -32,9 +32,10 @@ rod NumberedVerticalList := items -> contentsOf(items, items -> stacked apply(
 -- A table keeping the stock formatting shows its pairs, keys and arrows aligned.
 -- Any other is drawn as itself: a type, a package or a Gröbner basis is a table
 -- too, which no one means to read pair by pair.
-tabulated HashTable := table -> stacked {{grid(apply(pairs table, pair -> {
-	optionKey pair#0, rod symbol =>, rod pair#1
-}), "Aligned")}}
+tabulated List := drawnPairs -> stacked {{grid(apply(drawnPairs, (key, entry) ->
+		{key, rod symbol =>, entry}), "Aligned")}}
+tabulated HashTable := table -> tabulated apply(pairs table, (key, entry) ->
+		(optionKey key, rod entry))
 rod HashTable := table -> (
 	stock := base -> lookup(expression, class table) === lookup(expression, base)
 		and lookup(net, class table) === lookup(net, base);
@@ -50,7 +51,7 @@ rod VirtualTally := tally' -> contentsOf(tally', tabulated)
 -- never typesets the hierarchy.
 rod Descent := tree -> contentsOf(tree, tree -> new Rod from {
 	Shape => "Tree",
-	Branches => apply(sort(pairs tree, toString @@ net @@ first), pair -> {
+	Branches => apply(sort(pairs tree, toString@@net@@first), pair -> {
 		rod(toString net pair#0) ++ {Highlight => Type},
 		rod pair#1
 	})

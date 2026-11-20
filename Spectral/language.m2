@@ -1,11 +1,11 @@
 -- The language's own objects: text, names, keywords, functions and the source
 -- positions they come from. None of them is maths, even as an operand.
 
-String.typewriter = true
-String.highlightGroup = "String"
+typewriter String := class' -> true
+highlightGroup String := class' -> "String"
 spelling String := identity
 
-Net.typewriter = true
+typewriter Net := class' -> true
 -- A net is its lines one under another; a string, one line of them, is spelled
 -- by itself.
 lined (List, Thing) := (lines, class') -> grid(apply(lines, line -> {atom(line,
@@ -15,32 +15,32 @@ rod String := lookup(rod, Thing)
 
 -- Handles on what the language runs on are spelled by their names, never maths.
 scan({Dictionary, File, NetFile, Database, Task, Mutex, Error, FunctionBody,
-	Pseudocode, SymbolBody, Manipulator}, class' ->
-		class'.typewriter = true)
+	Pseudocode, SymbolBody, Manipulator}, handle ->
+		typewriter handle := class' -> true)
 -- A timed value is the value with the time it took beneath, as M2 prints it.
 rod Time := timed -> grid({{rod timed#1}, {atom("-- " | toString timed#0
 		| " seconds", "Comment")}}, "Bare")
 
 -- An atomic integer is the integer it holds.
 rod AtomicInt := counter -> rod(new ZZ from counter) ++ {symbol Type => AtomicInt}
-Boolean.typewriter = true
-Boolean.highlightGroup = "Boolean"
-Nothing.typewriter = true
-Nothing.highlightGroup = "Builtin"
+typewriter Boolean := class' -> true
+highlightGroup Boolean := class' -> "Boolean"
+typewriter Nothing := class' -> true
+highlightGroup Nothing := class' -> "Builtin"
 
 -- A type, and a package, is coloured as one.
-Type.highlightGroup = "Type"
-Package.highlightGroup = "Package"
+highlightGroup Type := class' -> "Type"
+highlightGroup Package := class' -> "Package"
 
 -- A name stands for its value.
-Symbol.highlightGroup = "Variable"
+highlightGroup Symbol := class' -> "Variable"
 opaque Symbol := name -> (lookup(opaque, Thing)) name ++ {symbol Type => class value name}
 
 -- An indexed variable x_1 is drawn as the subscript it is spelled with.
 rod IndexedVariable := variable -> rod new Subscript from toList variable
 
 -- An operator keyword is coloured as an operator; any other as a keyword.
-Keyword.highlightGroup = "Keyword"
+highlightGroup Keyword := class' -> "Keyword"
 rod Keyword := keyword -> opaque keyword ++ {
 	Highlight => if operatorAttributes#?keyword then
 			"Operator"
@@ -48,9 +48,9 @@ rod Keyword := keyword -> opaque keyword ++ {
 }
 
 -- A function links to its source.
-Function.typewriter = true
-Function.highlightGroup = "Function"
-Command.highlightGroup = "Macro"
+typewriter Function := class' -> true
+highlightGroup Function := class' -> "Function"
+highlightGroup Command := class' -> "Macro"
 -- A function, and a command as the function it runs, is spelled by its name, or
 -- shown by its code when it has none, and links to its source.
 named Thing := Boolean => x -> (
@@ -111,7 +111,7 @@ spelling FilePosition := position -> concatenate(
 	if #position > 3 then
 		("-", toString position#3, ":", toString position#4) else ""
 )
-FilePosition.highlightGroup = "MarkupLink"
+highlightGroup FilePosition := class' -> "MarkupLink"
 rod FilePosition := position -> opaque position ++ {
 	symbol Text => spelling position,
 	Target => sourceTarget position
