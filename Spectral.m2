@@ -2,7 +2,7 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "0.5.0",
+	Version => "0.5.1",
 	Date => "November 20, 2026",
 	Headline => "drawing values as structured, typed trees",
 	PackageImports => { "Complexes", "Varieties", "Text" },
