@@ -255,11 +255,14 @@ rod Thing := x -> (
 		rod shape#0
 	else unfolding(x, spelledShape(x, shape))
 )
-specType Thing := x -> drawnWithin(valueDepth class x, x, () ->
-		specType'(typeDepth class x, x))
+specType Thing := x -> specType'(typeDepth class x, x)
 -- Each level of a type below the outermost unfolds the values it is built
--- over, or the parts of its expression, one level further.
+-- over, or the parts of its expression, one level further. A type is drawn
+-- inside the drawing of its value, so what the value is built over is drawn by
+-- its name.
 specType' (ZZ, Thing) := (depth, x) -> (
+	unfoldable ?? return drawnWithin(valueDepth class x, x, () ->
+			specType'(depth, x));
 	shape := expression x;
 	inner := if depth <= 1 then
 			return rod class x

@@ -2,7 +2,7 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "0.5.1",
+	Version => "0.5.2",
 	Date => "November 20, 2026",
 	Headline => "drawing values as structured, typed trees",
 	PackageImports => { "Complexes", "Varieties", "Text" },
@@ -269,4 +269,5 @@ scan(values currentPackage#"private dictionary", key ->
 
 beginDocumentation()
 load "./Spectral/documentation.m2"
+load "./Spectral/tests.m2"
 end--
