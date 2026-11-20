@@ -2,7 +2,7 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "0.5.2",
+	Version => "0.6.0",
 	Date => "November 20, 2026",
 	Headline => "drawing values as structured, typed trees",
 	PackageImports => { "Complexes", "Varieties", "Text" },
@@ -33,7 +33,6 @@ export {
 	"speek",
 	"speek'",
 	"formatted",
-	"drawsAs",
 	"HLG",
 	"UnderExpression",
 	"OverExpression",
@@ -50,14 +49,22 @@ export {
 }
 
 
--- The fields a drawing's meta may name: Class, the type it is drawn as; a
+-- The fields of a drawing: the Shape it lays out, an expression; Class, the type it is drawn as; a
 -- Highlight colouring it and its parts, reaching Reach levels below it; the
 -- Target it links to; an atom's own Tex; the Type of the value it stands for;
 -- whether an atom is Typeset; and, for a value drawn whole, its Fallback text,
 -- its Code, a documentation page's Html, the TypeNames the page resolves and
 -- the ExampleWidth its examples were archived at.
-drawingFields = {Class, Highlight, Reach, Target, Tex, symbol Type, Typeset,
-	Fallback, Code, Html, TypeNames, ExampleWidth}
+-- Each is keyed by the symbol user code means by its name, Core's or the
+-- user's own global one, so x.Highlight reads it from anywhere; Spectral's own
+-- name for a field holds that key, so its code writes Highlight => … as user
+-- code does. Straight, a diagram's option, is keyed the same way.
+drawingFields = apply({"Shape", "Class", "Highlight", "Reach", "Target", "Tex",
+	"Type", "Typeset", "Fallback", "Code", "Html", "TypeNames", "ExampleWidth",
+	"Straight"}, name -> if Core.Dictionary#?name then
+			Core.Dictionary#name
+		else getGlobalSymbol(currentPackage#"private dictionary", name)
+		<- getGlobalSymbol(User#"private dictionary", name))
 
 -- HLG "Operator": a highlight group by its name, one of highlightGroups; any
 -- other name is an error where the group is made.
@@ -91,14 +98,15 @@ shapes = { Holder, RowExpression, Parenthesize, Divide, Subscript, Superscript,
 	AlignedExpression, UnderExpression, OverExpression, DiagramExpression,
 	TreeExpression }
 
--- A drawing, the format string a value is shown by: Rod{shape, meta}, an
--- expression of one of the shapes whose parts are drawings in turn, and what
--- it says of how it is drawn: Class, the type it is drawn as, which colours an
--- atom and decides what is typeset; a Highlight colouring it and its parts in
--- place of their own, reaching Reach levels below it (all when unset); a Target
--- it links to; an atom's own Tex. M2 prints it as the expression it is:
--- rod(1/2) is Rod{1/2, {Class => Divide}}, its parts Rod{Holder{"1"}, …}.
-Rod = new HeaderType of Expression
+-- A drawing, the format string a value is shown by: a table of fields, its
+-- Shape an expression of one of the shapes whose parts are drawings in turn,
+-- and what it says of how it is drawn: Class, the type it is drawn as, which
+-- colours an atom and decides what is typeset; a Highlight colouring it and its
+-- parts in place of their own, reaching Reach levels below it (all when unset);
+-- a Target it links to; an atom's own Tex. Every field is read as x.Shape,
+-- x.Highlight, …, from any code. M2 prints it as the expression it is:
+-- rod(1/2) is Rod{Divide{…}, Class => Divide}, printing as 1/2.
+Rod = new SelfInitializingType of HashTable
 
 -- The public drawing, what the shell shows a value as. Install rod for a
 -- class to draw its values differently, or formatted for an expression class to
@@ -132,8 +140,7 @@ drawsAs = method(TypicalValue => Boolean)
 shapeOf = method(Dispatch => Thing)
 
 -- The drawing's own machinery, used by the methods of every class.
--- field key: the field of a drawing's meta a key names, Spectral's own symbol
--- spelled as the key is.
+-- field key: the field of a drawing a key names, the one spelled as it is.
 field = method(Dispatch => Thing)
 -- parts drawn extends Core's parts to drawings: the drawings a node is built
 -- from, in the order they are read.
@@ -233,23 +240,14 @@ optionKey = method(Dispatch => Thing, TypicalValue => Rod)
 -- named x: whether x is the value of the global name it spells: sin is, an
 -- anonymous x -> x is not.
 named = method(Dispatch => Thing, TypicalValue => Boolean)
+-- spelledName "C": a name a drawing introduces for a part, drawn as a symbol is.
+spelledName = method(Dispatch => Thing, TypicalValue => Rod)
 -- sourceLines position: the lines of code at a source position, as code shows
 -- them; null when they are nowhere to be read.
 sourceLines = method(Dispatch => Thing)
 -- lined(lines, class): the lines one under another, each an atom of `class`, a
 -- type.
 lined = method(TypicalValue => Rod)
--- sourceTarget position: the file:// URL of a FilePosition, its file found on
--- the load path; null when the file cannot be found.
-sourceTarget = method(Dispatch => Thing)
--- foldedPath path: a path cut to its file and one directory above it:
--- "/a/b/c/file.m2" is "[...]/c/file.m2".
-foldedPath = method()
--- documentationTags page: the nodes a documentation page links to, each TO,
--- TO2 and TOH target once.
-documentationTags = method(Dispatch => Thing)
--- attributeText text: the text escaped to sit in a quoted HTML attribute.
-attributeText = method()
 
 -- How a value is drawn, class by class: each class's settings and methods stand
 -- together in one block, in the file of its subject.
@@ -262,10 +260,7 @@ load "./Spectral/complexes.m2"
 load "./Spectral/varieties.m2"
 load "./Spectral/hypertext.m2"
 
--- Drawing fields are keys, never values: their symbols stay unset.
-scan(values currentPackage#"private dictionary", key ->
-		if isMutable key and value key === key then
-		protect key)
+
 
 beginDocumentation()
 doc ///
@@ -293,7 +288,7 @@ Node
     rod
     "shapes"
     HLG
-    "drawing meta"
+    "drawing fields"
     specType
     speek
     keepNames
@@ -332,21 +327,26 @@ Node
     an expression with how it is drawn
   Usage
     Rod{shape}
-    Rod{shape, meta}
+    Rod{shape, Highlight => HLG "Keyword", …}
+    x.Shape
   Description
     Text
-      A Rod is the format string a value is shown by: an expression in one of
-      the @TO "shapes"@, its parts Rods in turn, and its meta, a list of options
-      saying how it is drawn, as listed under @TO "drawing meta"@. Being an
-      expression, it prints as the text it lays out. An atom is a Holder of its
-      text, coloured by the Class it is drawn as or by its Highlight.
+      A Rod is the format string a value is shown by: a table of fields, its
+      Shape an expression in one of the @TO "shapes"@ whose parts are Rods in
+      turn, the others saying how it is drawn, as listed under
+      @TO "drawing fields"@. Every field is read as x.Shape, x.Class, … from
+      any code. A Rod prints as the text it lays out. An atom is a Holder of
+      its text, coloured by the Class it is drawn as or by its Highlight.
       The shell is sent the tree with each colour named by its highlight
       group, see @TO highlightGroup@; the value itself is never sent.
     Example
       R = QQ[x, y];
       rod((x + 1)/2)
-      Rod {Divide {rod x, Rod {Holder {"n"}, {Highlight => HLG "Keyword"}}}}
-      speek rod(1/2)
+      Rod {Divide {rod x, Rod {Holder {"n"}, Highlight => HLG "Keyword"}}}
+      half = rod(1/2);
+      half.Shape
+      half.Class
+      speek half
 Node
   Key
     rod
@@ -370,8 +370,7 @@ Node
       for a type to build its @TO Rod@ directly.
     Example
       R = QQ[x, y];
-      formatted Sum := s -> Rod {RowExpression between(Rod {Holder {" (+) "},
-	      {Highlight => HLG "Operator"}}, apply(toList s, rod))};
+      formatted Sum := s -> Rod {RowExpression between(Rod {Holder {" (+) "}, Highlight => HLG "Operator"}, apply(toList s, rod))};
       rod(x + y)
 Node
   Key
@@ -521,10 +520,10 @@ Node
       Text, Muted, Canvas, Keyword, Operator, Delimiter, Punctuation, Comment,
       String, Number, Boolean, Builtin, Variable, Type, Function, Macro, Option,
       Package, MapArrow and MarkupLink. A Highlight in a drawing's
-      @TO "drawing meta"@ and a @TO highlightGroup@ name one of them.
+      @TO "drawing fields"@ and a @TO highlightGroup@ name one of them.
     Example
       HLG "Operator"
-      Rod {Holder {"+"}, {Highlight => HLG "Operator"}}
+      Rod {Holder {"+"}, Highlight => HLG "Operator"}
 Node
   Key
     specType
@@ -569,7 +568,7 @@ Node
       parent when it has one, and its pairs, sorted as peek sorts them. Each
       entry is inspected one level less deep; past the depth, one level by
       default, and for anything else, a value is drawn as itself. A Rod is a
-      list too, so speek shows the shape and the meta of a drawing.
+      table too, so speek shows the fields of a drawing.
     Example
       speek {1, 1/2, {2}}
       speek'(2, {1, 1/2, {2}})
@@ -577,16 +576,11 @@ Node
 Node
   Key
     "shapes"
-    drawsAs
-    (drawsAs, Rod, Type)
     OverExpression
     DiagramExpression
     TreeExpression
   Headline
     the expression classes the shell draws
-  Usage
-    shapes
-    drawsAs(drawn, type)
   Description
     Text
       A @TO Rod@ is an expression of one of these classes, its parts Rods:
@@ -600,27 +594,29 @@ Node
       {{row, column}, piece} joined by arrows {from, to, label} with a Straight
       diagram for a layout in characters, and TreeExpression{{label, subtree},
       ...}. An expression of a class derived from one is drawn as that one.
-      drawsAs tells whether a drawing is laid out as an expression class.
+      A drawing's Class is the expression class it was laid out from: a sum
+      and a product are both rows, told apart by their Class.
     Example
       R = QQ[x, y];
       Rod {Superscript {rod x, rod 2}}
-      drawsAs(rod(x + 1), Sum)
+      (rod(x + 1)).Class
 Node
   Key
-    "drawing meta"
+    "drawing fields"
   Headline
-    what the meta of a Rod may carry
+    what a Rod may carry
   Description
     Text
-      Its fields are named by symbols Spectral keeps to itself, which a meta
-      names by spelling: Highlight => HLG "Keyword" names Spectral's Highlight
-      whatever symbol Highlight is where it is written, and a name that is no
-      field is an error. Class is the type a node is drawn as, which colours an atom by its
-      @TO highlightGroup@ and decides what is typeset. Highlight is an
-      @TO HLG@, or a type naming its highlightGroup, the node and its
-      parts are coloured as in place of their own; Reach, when set, is how
-      many levels below the node it reaches, 0 for the node alone. Target is a
-      link the node opens, and Tex the TeX of an atom that has its own.
+      A drawing's fields are keyed by the symbols any code means by their
+      names, so x.Highlight reads a Highlight wherever the drawing was made, and
+      a field that is not one of these is an error. Shape is the expression it
+      lays out. Class is the type it is drawn as, which colours an atom by its
+      @TO highlightGroup@ and decides what is typeset; Type is the class of the
+      value it stands for. Highlight is an @TO HLG@, or a type naming its
+      highlightGroup, the node and its parts are coloured as in place of their
+      own; Reach, when set, is how many levels below the node it reaches, 0 for
+      the node alone. Target is a link the node opens, and Tex the TeX of an
+      atom that has its own.
     Example
       R = QQ[x, y];
       rod Ideal := I -> (lookup(rod, Thing)) I ++ {Highlight => Keyword, Reach => 1};
@@ -631,25 +627,26 @@ Node
 -- at depths given explicitly rather than by any class's setting.
 
 TEST ///
--- A Rod is an expression with how it is drawn: Rod{shape, meta}, its parts Rods.
+-- A Rod is a table of how it is drawn, its Shape an expression whose parts are
+-- Rods, every field read by its name.
 R = QQ[x, y]
 half = rod(1/2)
 assert instance(half, Rod)
-assert instance(half#0, Divide)
-assert all(toList half#0, part -> instance(part, Rod))
+assert instance(half.Shape, Divide)
+assert all(toList half.Shape, part -> instance(part, Rod))
+assert(half.Class === Divide and half.Type === QQ)
 assert(toString half == "1/2")
-assert drawsAs(rod(x + 1), Sum)
+assert((rod(x + 1)).Class === Sum)
 -- Built by hand, a drawing is the expression it lays out.
-assert(toString Rod {RowExpression {rod x, Rod {Holder {" (+) "},
-	{Highlight => HLG "Operator"}}, rod y}} == "x (+) y")
+assert(toString Rod {RowExpression {rod x, Rod {Holder {" (+) "}, Highlight => HLG "Operator"}, rod y}} == "x (+) y")
 ///
 
 TEST ///
--- A colour is one of the shell's highlight groups, and a meta names only the
--- fields a drawing has: anything made up is an error where it is written.
+-- A colour is one of the shell's highlight groups, and a drawing has only the
+-- fields there are: anything made up is an error where it is written.
 assert(HLG "Operator" === HLG "Operator")
 assert(try (HLG "Operatr"; false) else true)
-assert(try (Rod {Holder {"+"}, {Hilight => HLG "Operator"}}; false) else true)
+assert(try (Rod {Holder {"+"}, Hilight => HLG "Operator"}; false) else true)
 ///
 
 TEST ///

@@ -12,13 +12,13 @@ rod MutableList := rod Partition := items -> contentsOf(items, items ->
 rod Set := set' -> rod keys set'
 highlightGroup Option := class' -> HLG "Option"
 rod Option := pair -> contentsOf(pair, pair -> Rod {RowExpression {optionKey pair#0,
-	Rod {Holder {" => "}, {Highlight => HLG "Operator"}}, rod pair#1}})
+	Rod {Holder {" => "}, Highlight => HLG "Operator"}, rod pair#1}})
 
 -- A numbered vertical list numbers its rows from 0, the rows aligned beside
 -- their numbers.
 rod NumberedVerticalList := items -> contentsOf(items, items -> Rod {VerticalList {
 	Rod {AlignedExpression apply(#items, i -> {Rod {Holder {toString i | "."},
-		{Class => ZZ}}, rod items#i})}
+		Class => ZZ}, rod items#i})}
 }})
 
 -- A table keeping the stock formatting shows its pairs, keys and arrows aligned.

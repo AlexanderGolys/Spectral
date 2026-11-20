@@ -79,7 +79,7 @@ rod BettiTally := betti' -> contentsOf(betti', betti' -> (
 	columns := sort unique apply(keys betti', key -> key#0);
 	slants := sort unique apply(keys betti', key -> key#2 - key#0);
 	counted := select' -> sum(select(keys betti', select'), key -> betti'#key);
-	label := text -> Rod {Holder {text}, {Highlight => HLG "Muted"}};
+	label := text -> Rod {Holder {text}, Highlight => HLG "Muted"};
 	Rod {Table join({prepend(label "", apply(columns, rod))}, {prepend(label "total:",
 		apply(columns, i -> rod counted(key -> key#0 == i)))}, apply(slants, slant ->
 				prepend(label(toString slant | ":"), apply(columns, i -> (

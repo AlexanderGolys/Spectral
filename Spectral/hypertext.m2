@@ -6,33 +6,31 @@
 -- and archived example output cannot be unwrapped without it.
 exampleWidth := value Core#"private dictionary"#"ArgPrintWidthN"
 
--- The nodes a page links to.
-documentationTags Thing := List => x -> {}
-documentationTags Hypertext := List => page -> unique flatten apply(toList page,
-	documentationTags)
-documentationTags TO := documentationTags TO2 := documentationTags TOH :=
-List => link -> {link#0}
-
-attributeText String := String => text -> fold((escaped, entity) ->
-		replace(entity#0, entity#1, escaped), text,
-	{("&", "&amp;"), ("\"", "&quot;"), ("<", "&lt;"), (">", "&gt;")})
-
 -- keysLinked(page, document): the HTML `page` of `document` with each link to a
 -- node pointing at the node's key, spelled as the M2 string `help` reads, so
 -- the shell can open it. M2 links a tag wherever it appears with the same
 -- target, so the target its own link gets is the one to replace.
 keysLinked = method()
-keysLinked (String, Hypertext) := String => (page, document) -> fold((linked, tag) -> (
-	anchor := html TO {tag};
-	target := regex(///href="[^"]*"///, anchor);
-	if target === null then
-		linked
-	else demark("href=\"" | attributeText format format tag | "\"",
-		separate(regexQuote substring(target#0, anchor), linked))
-), page, documentationTags document)
+keysLinked (String, Hypertext) := String => (page, document) -> (
+	links := part -> if instance(part, TO) or instance(part, TO2) or instance(part, TOH)
+		then {part#0} else if instance(part, Hypertext) then
+		flatten apply(toList part, links)
+	else {};
+	fold((linked, tag) -> (
+		anchor := html TO {tag};
+		target := regex(///href="[^"]*"///, anchor);
+		key := fold((escaped, entity) -> replace(entity#0, entity#1, escaped),
+			format format tag,
+			{("&", "&amp;"), ("\"", "&quot;"), ("<", "&lt;"), (">", "&gt;")});
+		if target === null then
+			linked
+		else demark("href=\"" | key | "\"",
+			separate(regexQuote substring(target#0, anchor), linked))
+	), page, unique links document)
+)
 
 -- pathsShortened page: the HTML `page` with the text of each link to a file cut
--- as foldedPath cuts it. `file:///dir/name.m2#L1:C2` is spelled with its whole
+-- as a source position spells it. `file:///dir/name.m2#L1:C2` is spelled with its whole
 -- directory, which is most of a line and none of what is wanted; its text
 -- keeps the file's name, one directory above it, and the position.
 pathsShortened = method()
@@ -44,7 +42,7 @@ pathsShortened String := page -> (
 		text := substring(match#3, page);
 		shortened = shortened | substring(page, 0, match#0#0) | substring(match#1, page)
 			| (if substring(text, 0, #path) == path then
-						foldedPath path | substring(text, #path)
+						spelling new FilePosition from {path} | substring(text, #path)
 					else text) | "</a>";
 		page = substring(page, match#0#0 + match#0#1)
 	);
@@ -61,13 +59,13 @@ sourcesLinked String := page -> (
 	while (match := regex(pattern, page)) =!= null do (
 		file := replace("&amp;", "&", replace("&gt;", ">", replace("&lt;", "<",
 			substring(match#1, page))));
-		target := sourceTarget new FilePosition from {file,
-			value substring(match#2, page), value substring(match#3, page)};
+		target := (rod new FilePosition from {file,
+			value substring(match#2, page), value substring(match#3, page)})#Target;
 		original := substring(match#0, page);
 		linked = linked | substring(page, 0, match#0#0)
 			| (if target === null then
 						original
-					else "<a href=\"" | attributeText target | "\">" | original | "</a>");
+					else "<a href=\"" | target | "\">" | original | "</a>");
 		page = substring(page, match#0#0 + match#0#1)
 	);
 	linked | page

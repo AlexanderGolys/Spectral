@@ -9,7 +9,7 @@ typewriter Net := class' -> true
 -- A net is its lines one under another; a string, one line of them, is spelled
 -- by itself.
 lined (List, Type) := (lines, class') -> Rod {Table apply(lines, line ->
-		{Rod {Holder {line}, {Class => class'}}})}
+		{Rod {Holder {line}, Class => class'}})}
 rod Net := text -> lined(unstack text, Net)
 rod String := lookup(rod, Thing)
 
@@ -19,7 +19,7 @@ scan({Dictionary, File, NetFile, Database, Task, Mutex, Error, FunctionBody,
 		typewriter handle := class' -> true)
 -- A timed value is the value with the time it took beneath, as M2 prints it.
 rod Time := timed -> Rod {Table {{rod timed#1}, {Rod {Holder {"-- "
-		| toString timed#0 | " seconds"}, {Highlight => HLG "Comment"}}}}}
+		| toString timed#0 | " seconds"}, Highlight => HLG "Comment"}}}}
 
 -- An atomic integer is the integer it holds.
 rod AtomicInt := counter -> rod(new ZZ from counter) ++ {symbol Type => AtomicInt}
@@ -34,6 +34,7 @@ highlightGroup Package := class' -> HLG "Package"
 
 -- A name stands for its value.
 highlightGroup Symbol := class' -> HLG "Variable"
+spelledName String := name -> Rod {Holder {name}, Class => Symbol, symbol Type => Symbol}
 opaque Symbol := name -> (lookup(opaque, Thing)) name ++ {symbol Type => class value name}
 
 -- An indexed variable x_1 is drawn as the subscript it is spelled with.
@@ -65,35 +66,10 @@ rod Function := rod Command := runnable -> (
 				lined(code', class runnable) ++ {symbol Type => class runnable}
 			else opaque runnable) ++ {
 				Target => if position =!= null then
-						sourceTarget position
+						(rod position)#Target
 			}
 )
 
--- A source position is linked by its file, found on the load path, and spelled
--- with the file's name and one directory above it.
-sourceTarget FilePosition := position -> (
-	file := position#0;
-	found := select(prepend(file, apply(path, directory -> directory | file)),
-		fileExists);
-	if #file > 0 and #found > 0 then
-		urlEncode concatenate(
-			"file://", toAbsolutePath first found,
-			"#L", toString position#1, ":C", toString position#2,
-			if #position > 3 then
-				("-L", toString position#3, ":C", toString position#4) else ""
-		)
-)
-foldedPath String := path -> (
-	parts := select(separate("/", path), part -> part != "");
-	parents := drop(parts, -1);
-	if #parents == 0 then
-		last parts
-	else if #parents == 1 then
-		(if first path == "/" then
-					"/"
-				else "") | demark("/", parts)
-	else "[...]/" | demark("/", take(parts, -2))
-)
 -- The code at a position, cut from the lines M2 shows for it, from its file, the
 -- current input or the history, whose columns count a tab to the next multiple
 -- of 8 just as those lines are expanded; reading a file that has gone is the one
@@ -106,10 +82,30 @@ sourceLines FilePosition := position -> (
 	lines = append(drop(lines, -1), substring(last lines, 0, position#4));
 	prepend(substring(first lines, position#2), drop(lines, 1))
 )
-spelling FilePosition := position -> concatenate(
-	foldedPath position#0, ":", toString position#1, ":", toString position#2,
-	if #position > 3 then
-		("-", toString position#3, ":", toString position#4) else ""
+-- A source position is spelled with its file's name and one directory above
+-- it: /a/b/c/file.m2:12:3 is [...]/c/file.m2:12:3.
+spelling FilePosition := position -> (
+	parts := select(separate("/", position#0), part -> part != "");
+	concatenate(
+		if #parts <= 2 then
+			position#0
+		else "[...]/" | demark("/", take(parts, -2)),
+		if #position > 2 then (":", toString position#1, ":",
+			toString position#2) else "",
+		if #position > 4 then ("-", toString position#3, ":", toString position#4) else ""
+	)
 )
 highlightGroup FilePosition := class' -> HLG "MarkupLink"
-rod FilePosition := position -> opaque position ++ {Target => sourceTarget position}
+-- A source position links to its file, found on the load path.
+rod FilePosition := position -> (
+	file := position#0;
+	found := select(prepend(file, apply(path, directory -> directory | file)),
+		fileExists);
+	opaque position ++ {Target => if #file > 0 and #found > 0 then
+				urlEncode concatenate(
+					"file://", toAbsolutePath first found,
+					"#L", toString position#1, ":C", toString position#2,
+					if #position > 4 then
+						("-L", toString position#3, ":C", toString position#4) else ""
+				)}
+)

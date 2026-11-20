@@ -1,29 +1,29 @@
 -- The drawing itself: what a Rod is, how a value unfolds into one, and what
 -- every class draws as until its own block says otherwise.
 
--- Rod{shape} or Rod{shape, meta}, the meta a list of options:
---   Rod{Holder{"+"}, {Highlight => HLG "Operator"}}
+-- Rod{shape, field => value, …}: a drawing, the expression it lays out and how
+-- it is drawn, a table of its fields; the shape is the field Shape, also
+-- written Shape => shape:
+--   Rod{Holder{"+"}, Highlight => HLG "Operator"}
 --   Rod{Divide{rod 1, rod 2}}
-new Rod from List := (Rod, contents) -> (
-	meta := if #contents > 1 then
-			contents#1
-		else {};
-	{contents#0, if instance(meta, HashTable) then
-				meta
-			else hashTable apply(meta, entry -> field entry#0 => entry#1)}
-)
-Rod ++ List := Rod => (node, fields) -> Rod {node#0, join(pairs node#1, fields)}
+new Rod from List := (Rod, contents) -> hashTable apply(contents, entry ->
+		if instance(entry, Option) then
+		field entry#0 => entry#1
+	else Shape => entry)
+Rod ++ List := Rod => (node, fields) -> Rod join(apply(pairs node, (key, value) ->
+		key => value), fields)
 rod Rod := identity
+-- What a drawing draws, as an expression of its own: its shape with every
+-- part's expression in place of the part, so M2 prints it as it prints that
+-- expression.
+expression Rod := node -> changedIn(node#Shape, expression)
 
--- A key names the field of drawingFields spelled as it is, whichever symbol it
--- was where it was written, so {Highlight => …} names Spectral's Highlight from
--- any package; any other key is an error.
-field Symbol := key -> (
-	named := select(drawingFields, field' -> toString field' == toString key);
-	if #named == 0 then
-		error("no field " | toString key | " of a drawing; there are "
+-- A key names the field spelled as it is, whichever symbol it was where it was
+-- written; any other key is an error.
+field Thing := key -> (
+	(select(drawingFields, field' -> toString field' == toString key))#0
+		?? error("no field " | toString key | " of a drawing; there are "
 				| demark(", ", apply(drawingFields, toString)))
-	else first named
 )
 
 new HLG from String := (HLG, name) -> (
@@ -34,9 +34,9 @@ new HLG from String := (HLG, name) -> (
 net HLG := toString HLG := group -> "HLG " | format group#0
 
 -- A drawing prints as the expression it is.
-net Rod := net@@first
-toString Rod := toString@@first
-texMath Rod := texMath@@first
+net Rod := net@@expression
+toString Rod := toString@@expression
+texMath Rod := texMath@@expression
 
 shapeOf Thing := x -> (
 	(select(ancestors class x, ancestor -> member(ancestor, shapes)))#0 ?? null
@@ -68,11 +68,11 @@ net TreeExpression := tree -> stack apply(toList tree, branch -> stack prepend(
 ))
 
 -- Whether a node is drawn as `type`, or as something derived from it.
-drawsAs (Rod, Type) := (node, type) -> (node#1#?Class
-		and ancestor(type, node#1#Class))
+drawsAs (Rod, Type) := (node, type) -> (node#?Class
+		and ancestor(type, node#Class))
 
 -- The drawings a node is drawn from, every Rod in its shape's parts.
-parts Rod := node -> nested toList node#0
+parts Rod := node -> nested toList node#Shape
 nested Thing := part -> {}
 nested Rod := node -> { node }
 nested BasicList := items -> flatten apply(toList items, nested)
@@ -82,11 +82,11 @@ changedIn (Thing, Function) := (part, change) -> part
 changedIn (Rod, Function) := (node, change) -> change node
 changedIn (BasicList, Function) := (items, change) -> apply(items,
 	item -> changedIn(item, change))
-partsChanged (Rod, Function) := (node, change) -> Rod {
-	new class node#0 from apply(#node#0, position -> changedIn(node#0#position,
-		part -> change(position, part))),
-	node#1
-}
+partsChanged (Rod, Function) := (node, change) -> (
+	shape := node#Shape;
+	node ++ {Shape => new class shape from apply(#shape, position ->
+			changedIn(shape#position, part -> change(position, part)))}
+)
 
 -- Mark each atom whether it is typeset: by the class it is drawn as or the
 -- class of the value it stands for, or for being held by a typeset value or an
@@ -94,15 +94,13 @@ partsChanged (Rod, Function) := (node, change) -> Rod {
 -- or superscript, its second part, keeps its own setting; a node built only to
 -- lay out its parts passes on what it was given.
 typesetMarked (Rod, Boolean) := (node, forced) -> (
-	meta := node#1;
-	classes := select({ Class, symbol Type }, field -> meta#?field)/(field ->
-			meta#field);
+	classes := select({ Class, symbol Type }, key -> node#?key)/(key -> node#key);
 	setting := setting' -> any(classes, setting');
 	operator := setting typesetOperands;
 	marked := not setting typewriter and (forced or setting typeset or operator);
 	indexed := any(classes, class' -> ancestor(Subscript, class')
 			or ancestor(Superscript, class'));
-	if shapeOf node#0 === Holder then
+	if shapeOf node#Shape === Holder then
 		node ++ { Typeset => marked }
 	else if #classes == 0 then
 		partsChanged(node, (position, part) -> typesetMarked(part, forced))
@@ -239,10 +237,8 @@ optionsDropped Array := items -> new Array from apply(select(toList items, item 
 		not (instance(item, BinaryOperation) and item#0 === symbol =>)),
 	optionsDropped)
 -- Values whose expression holds nothing but themselves.
-opaque Thing := x -> Rod { Holder { spelling x }, {
-	Class => class x,
-	symbol Type => class x
-} }
+opaque Thing := x -> Rod { Holder { spelling x }, Class => class x,
+	symbol Type => class x }
 spelling Thing := x -> try toString x else toString class x
 rod Thing := x -> (
 	unfoldable ?? return rod'(valueDepth class x, x);
@@ -295,7 +291,7 @@ speek' (ZZ, HashTable) := (depth, table) -> (
 	else Rod { RowExpression {
 		if parent table =!= Nothing then
 			Rod { RowExpression { rod class table, Rod { Holder { " of " },
-				{ Highlight => HLG "Keyword" } }, rod parent table } }
+				Highlight => HLG "Keyword" }, rod parent table } }
 		else rod class table,
 		tabulated apply(sort(pairs table, toString@@first), (key, entry) ->
 				(optionKey key, speek'(depth - 1, entry)))
@@ -309,24 +305,26 @@ speek Thing := x -> speek'(1, x)
 -- Class and a Highlight by its own, a type by its highlightGroup. What only
 -- decides the drawing stays behind.
 transmitted Rod := node -> (
-	(shape, meta) := toSequence node;
+	shape := node#Shape;
+	drawnHere := { Shape, Class, symbol Type, Highlight };
 	group := class' -> (if instance(class', Type) then
 				highlightGroup class'
 			else class')#0;
 	options := select(toList shape, part -> instance(part, Option));
 	hashTable join(
 		{
-			Shape => toString shapeOf shape,
-			Parts => apply(select(toList shape,
+			"Shape" => toString shapeOf shape,
+			"Parts" => apply(select(toList shape,
 				part -> not instance(part, Option)), part -> changedIn(part,
 					transmitted))
 		},
-		apply(options, option -> option#0 => changedIn(option#1, transmitted)),
-		select(pairs meta, (field, value) -> not member(field, { Class,
-			symbol Type, Highlight })),
-		if shapeOf shape === Holder and meta#?Class then { Group =>
-				group meta#Class } else {},
-		if meta#?Highlight then { Highlight => group meta#Highlight } else {}
+		apply(options, option -> toString option#0 => changedIn(option#1, transmitted)),
+		apply(select(pairs node, (key, value) -> not member(key, drawnHere)),
+			(key, value) -> toString key => value),
+		if shapeOf shape === Holder and node#?Class then { "Group" =>
+				group node#Class } else {},
+		if node#?Highlight then { "Highlight" =>
+				group node#Highlight } else {}
 	)
 )
 transmitted (Function, Thing, Thing) := (draw, x, fallback) -> transmitted(

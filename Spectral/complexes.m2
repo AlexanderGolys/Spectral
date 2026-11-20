@@ -11,12 +11,12 @@ rod Complex := complex -> (
 		return rod 0;
 	(lo, hi) := concentration complex;
 	module := degree -> Intermediate {
-		Subscript {symbol C, degree},
+		Subscript {spelledName "C", degree},
 		complex_degree,
 		UnderExpression {Holder {complex_degree}, degree}
 	};
 	differential := degree -> Intermediate {
-		Subscript {symbol d, degree},
+		Subscript {spelledName "d", degree},
 		complex.dd_degree,
 		new Array from {Table entries complex.dd_degree}
 	};
@@ -104,15 +104,15 @@ rod ComplexMap := map -> (
 		apply(toList(lo .. hi), degree -> join({degree,
 			Intermediate {Subscript {name, degree}, complex_degree,
 				Holder {complex_degree}}},
-			if degree == lo then {} else {matrixPart(symbol d, degree,
+			if degree == lo then {} else {matrixPart(spelledName "d", degree,
 				complex.dd_degree)}))
 	);
 	targetName := if source map === target map then
-			symbol C
-		else symbol D;
+			spelledName "C"
+		else spelledName "D";
 	mapName := if map === (source map).dd then
-			symbol d
-		else symbol f;
+			spelledName "d"
+		else spelledName "f";
 	shift := degree map;
 	(lo, hi) := concentration source map;
 	components := select(apply(toList(lo .. hi), degree -> (
@@ -125,7 +125,7 @@ rod ComplexMap := map -> (
 		entry -> entry =!= null);
 	unfolding(map, ComplexMapExpression {
 		shift,
-		chain(source map, symbol C),
+		chain(source map, spelledName "C"),
 		chain(target map, targetName),
 		components
 	})
