@@ -2,7 +2,7 @@
 -- positions they come from. None of them is maths, even as an operand.
 
 -- Text in a typewriter face, coloured as `group`.
-typewritten := (text, group) -> Rod {Holder {text}, Typeset => false,
+typewritten := (text, group) -> Rod {Holder {text}, codeFont,
 	Group => HLG group}
 -- Lines one under another, each typewritten.
 lined := lines -> Rod {Table apply(lines, line -> {typewritten(line, "Text")})}
@@ -14,7 +14,7 @@ rod Net := text -> lined unstack text
 -- maths.
 scan({Dictionary, File, NetFile, Database, Task, Mutex, Error, FunctionBody,
 	Pseudocode, SymbolBody, Manipulator}, handle ->
-		rod handle := x -> spelledAsM2 x ++ {Typeset => false})
+		rod handle := x -> spelledAsM2 x ++ {codeFont})
 -- A timed value is the value with the time it took beneath, as M2 prints it.
 rod Time := timed -> Rod {Table {{rod' timed#1}, {Rod {Holder {"-- "
 		| toString timed#0 | " seconds"}, Highlight => HLG "Comment"}}}}
@@ -87,7 +87,7 @@ rod FilePosition := position -> (
 	);
 	found := select(prepend(file, apply(path, directory -> directory | file)),
 		fileExists);
-	Rod {Holder {spelled}, Group => HLG "MarkupLink", Typeset => false,
+	Rod {Holder {spelled}, Group => HLG "MarkupLink", codeFont,
 		Target => if #position > 2 and #file > 0 and #found > 0 then
 				urlEncode concatenate(
 					"file://", toAbsolutePath first found,

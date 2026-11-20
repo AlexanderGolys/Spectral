@@ -12,7 +12,7 @@ rod Complex := complex -> (
 	chain := fold((drawn, degree) -> MapExpression {drawn, module degree,
 		complex.dd_degree}, MapExpression {expression 0, module lo},
 		toList(lo + 1 .. hi));
-	rod' MapExpression {chain, expression 0} ++ {Typeset => true}
+	rod' MapExpression {chain, expression 0} ++ {mathsFont}
 )
 
 -- A map of complexes is drawn as a diagram: the source complex above the
@@ -32,7 +32,7 @@ rod ComplexMap := map' -> (
 		apply(toList(lo .. hi), degree -> join({degree, complex_degree},
 			if degree == lo then {} else {complex.dd_degree}))
 	);
-	(source, target) := (listed source map', listed target map');
+	(sourceChain, targetChain) := (listed source map', listed target map');
 	(lo, hi) := concentration source map';
 	components := select(apply(toList(lo .. hi), degree -> {degree, map'_degree}),
 		component -> component#1 != 0);
@@ -45,15 +45,17 @@ rod ComplexMap := map' -> (
 				else 0};
 		rows := if straight then {1, 2} else {0, 1};
 		numbered := if straight then
-				{(0, 0, degrees source), (3, shift, degrees target)} else {(2, 0,
-					degrees source | degrees target)};
+				{(0, 0, degrees sourceChain), (3, shift,
+					degrees targetChain)} else {(2, 0,
+						degrees sourceChain | degrees targetChain)};
 		-- The first column is the zero before the lowest degree.
-		lowest := min flatten apply(2, k -> apply(degrees {source, target}#k, degree ->
+		lowest := min flatten apply(2, k -> apply(degrees {sourceChain,
+			targetChain}#k, degree ->
 				degree - offsets#k));
 		column := (degree, offset) -> degree - offset - lowest + 1;
 		-- Each complex as its pieces and its arrows.
 		drawn := apply(2, k -> (
-			chain := {source, target}#k;
+			chain := {sourceChain, targetChain}#k;
 			at := degree -> {rows#k, column(degree, offsets#k)};
 			(first', last') := (min degrees chain, max degrees chain);
 			{{{at(first' - 1), 0}, {at(last' + 1), 0}} | apply(chain, entry ->
@@ -76,5 +78,5 @@ rod ComplexMap := map' -> (
 	diagram := if shift == 0 or #components == 0 then
 			arranged false
 		else append(arranged false, Straight => arranged true);
-	rod' diagram ++ {Typeset => true}
+	rod' diagram ++ {mathsFont}
 )

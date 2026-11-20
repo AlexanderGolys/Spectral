@@ -30,7 +30,13 @@ throughRods := (part, change) -> (
 
 -- A drawing prints as the expression it is: its shape with every part's
 -- expression in place of the part.
-expression Rod := node -> throughRods(node#Shape, expression)
+-- An atom set in a maths alphabet M2 spells its letters twice in, as QQ for
+-- ℚ and OO for 𝒪, is spelled so.
+expression Rod := node -> (
+	if node#?Font and member(node#Font, doubledFonts) then
+		Holder {concatenate apply(characters node#Shape#0, letter -> letter | letter)}
+	else throughRods(node#Shape, expression)
+)
 net Rod := net@@expression
 toString Rod := toString@@expression
 texMath Rod := texMath@@expression
@@ -161,7 +167,7 @@ rod' = deepened(x -> (
 		drawnByValue x
 	else if resolutions == 0 then
 		Rod { Holder { name }, Class => Symbol, Group => HLG "Variable",
-			Typeset => true }
+			mathsFont }
 	else within(resolutions - 1, x, () -> drawnByValue x)
 ), (depth, x) -> within(depth, x, () -> drawnByValue x))
 rod Rod := rod'
@@ -186,43 +192,76 @@ shapeOf := shape -> (
 	(select(ancestors class shape, ancestor -> member(ancestor, shapes)))#0
 )
 
--- A drawing as the shell is sent it: its shape's name, its Parts and its
--- options as fields of their own, and what it says of how it is drawn, every
--- colour by its highlight group's name. An atom is typeset as it says, or as
--- the drawing holding it is when it says nothing, a drawing saying nothing
--- passing on what it was given. What only decides the drawing stays behind.
-drawnHere := { Shape, Class, Parameters, Typeset, Group, Highlight }
-transmitted := (node, forced) -> (
+-- A drawing as the shell is sent it: its shape's name and its parts, every
+-- atom with the colour and the font it is drawn in. An atom is coloured by a
+-- Highlight over it that reaches it, else by its own Group, and set in the
+-- Font of the nearest drawing around it that gives one; `over` is the
+-- highlight reaching down, with how many more levels it reaches. A matrix
+-- sends its Rows and its rows' and columns' Degrees, a diagram its Pieces, its
+-- Arrows and its Straight diagram. What only decides the drawing stays behind.
+transmitted := (node, font, over) -> (
 	shape := node#Shape;
-	typeset := if node#?Typeset then
-			node#Typeset
-		else forced;
-	sent := part -> throughRods(part, part' -> transmitted(part', typeset));
+	font = if node#?Font then
+			node#Font
+		else font;
+	if node#?Highlight then
+		over = (node#Highlight, if node#?Reach then
+					node#Reach
+				else infinity);
+	below := if over =!= null and over#1 > 0 then (over#0, over#1 - 1);
+	sent := part -> throughRods(part, part' -> transmitted(part', font, below));
 	parts := select(toList shape, part -> not instance(part, Option));
-	options := select(toList shape, part -> instance(part, Option));
-	atom := shapeOf shape === Holder;
-	hashTable join(
-		{
-			"Shape" => toString shapeOf shape,
-			"Parts" => apply(parts, sent)
-		},
-		apply(options, option -> toString option#0 => sent option#1),
-		apply(select(pairs node, (key, value) -> not member(key, drawnHere)),
-			(key, value) -> toString key => value),
-		if atom then { "Typeset" => typeset } else {},
-		if atom and node#?Group then { "Group" => node#Group#0 } else {},
-		if node#?Highlight then { "Highlight" => node#Highlight#0 } else {}
-	)
+	options := hashTable select(toList shape, part -> instance(part, Option));
+	name := shapeOf shape;
+	hashTable {
+		"Shape" => if name === Holder then
+				"Atom"
+			else toString name,
+		"Parts" => if name === Holder then
+				hashTable {
+					"Text" => parts#0,
+					"Highlight" => (if over =!= null then
+								over#0
+							else if node#?Group then
+							node#Group
+						else HLG "Text")#0,
+					"Font" => font
+				}
+			else if name === MatrixExpression then
+			hashTable {
+				"Rows" => sent parts,
+				"Degrees" => if options#?Degrees then
+						sent options#Degrees
+			}
+		else if name === DiagramExpression then
+			hashTable {
+				"Pieces" => sent parts#0,
+				"Arrows" => sent parts#1,
+				"Straight" => if options#?Straight then
+						sent options#Straight
+			}
+		else sent parts
+	}
 )
 
--- What the shell is sent for a value, its type and its structure; a drawing a
--- broken rod throws out of is sent as the fallback's own text.
-sent := (draw, x, fallback) -> transmitted(try draw x
-		else spelledAsM2 fallback,
-	false)
-drawnAs = x -> sent(x -> rod'_0 x ++ {
-	Fallback => (try toString net x),
-	Code => (try toString x)
-}, x, x)
-typedAs = x -> sent(specType, x, class x)
-inspectedAs = x -> sent(speek, x, x)
+-- What the shell is sent for a value: its drawing, where it links to and the
+-- documentation page it is, from one drawing; its type; its inspection. A
+-- drawing a broken rod throws out of is sent as M2 spells the value.
+drawnSafely := (draw, x) -> try draw x else spelledAsM2 x
+drawnAs = x -> (
+	drawn := drawnSafely(rod'_0, x);
+	hashTable {
+		"value" => transmitted(drawn, codeFont#1, null),
+		"location" => if drawn#?Target then
+				drawn#Target,
+		"document" => if drawn#?Html then
+				hashTable {
+					"html" => drawn#Html,
+					"exampleWidth" => drawn#ExampleWidth,
+					"typeNames" => drawn#TypeNames
+				}
+	}
+)
+typedAs = x -> transmitted(try specType x
+		else spelledAsM2 class x, codeFont#1, null)
+inspectedAs = x -> transmitted(drawnSafely(speek, x), codeFont#1, null)

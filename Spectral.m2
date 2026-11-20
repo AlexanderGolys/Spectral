@@ -2,7 +2,7 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "0.7.0",
+	Version => "0.8.0",
 	Date => "November 20, 2026",
 	Headline => "drawing values as structured, typed trees",
 	PackageImports => { "Complexes", "Varieties", "Text" },
@@ -38,11 +38,8 @@ export {
 	"Highlight",
 	"Reach",
 	"Target",
-	"Tex",
-	"Typeset",
+	"Font",
 	"Parameters",
-	"Fallback",
-	"Code",
 	"Html",
 	"TypeNames",
 	"ExampleWidth",
@@ -58,6 +55,29 @@ highlightGroups = {"Text", "Muted", "Canvas", "Keyword", "Operator", "Delimiter"
 -- HLG "Operator": a highlight group by its name, one of highlightGroups; any
 -- other name is an error where the group is made.
 HLG = new SelfInitializingType of BasicList
+
+-- The fonts an atom is set in, each by the TeX command setting it: TeX's maths
+-- alphabets, set as maths, and its text faces, set as text beside it; TeX's own
+-- maths, italic letters and upright digits, has none. An atom of a drawing that
+-- names none is code, typewritten.
+fonts = hashTable {
+	"mathbb" => "MathBB",
+	"mathfrak" => "MathFrak",
+	"mathcal" =>
+		"MathCal",
+	"mathbf" => "MathBf",
+	"mathit" => "MathIt",
+	"mathrm" => "MathRm",
+	"texttt" => "TextTT",
+	"text" => "TextNormal",
+	"textbf" => "TextBf",
+	"textit" =>
+		"TextIt"
+}
+-- The alphabets M2's names spell each letter of twice: QQ, OO.
+doubledFonts = {fonts#"mathbb", fonts#"mathcal"}
+mathsFont = Font => "MathNormal"
+codeFont = Font => fonts#"texttt"
 
 -- Spectral's own shapes, laid out as no class of Core's is.
 -- UnderExpression{base, label}, OverExpression{base, label}: a label centred
@@ -97,11 +117,10 @@ namedClasses = { Ring, Ideal, Module, Matrix, RingMap, Variety, CoherentSheaf,
 -- of the shapes whose parts are drawings in turn; the Class it is laid out as;
 -- an atom's own colour Group; a Highlight colouring it and its parts in place
 -- of their own, reaching Reach levels below it, all when unset; the Target it
--- links to; an atom's own Tex; whether it is Typeset as maths, its atoms too
--- unless they say otherwise; the Parameters of a value drawn from its
--- expression, the values it is built over; and, for a value drawn whole, its
--- Fallback text, its Code, a documentation page's Html, the TypeNames the page
--- resolves and the ExampleWidth its examples were archived at. M2 prints it as
+-- links to; the Font its atoms are set in unless they say otherwise; the
+-- Parameters of a value drawn from its expression, the values it is built
+-- over; and, for a documentation page, its Html, the TypeNames it resolves and
+-- the ExampleWidth its examples were archived at. M2 prints it as
 -- the expression it is: rod(1/2) is Rod{Divide{…}, Class => Divide}, printing
 -- as 1/2.
 Rod = new SelfInitializingType of HashTable
@@ -366,11 +385,8 @@ Node
     Highlight
     Reach
     Target
-    Tex
-    Typeset
+    Font
     Parameters
-    Fallback
-    Code
     Html
     TypeNames
     ExampleWidth
@@ -382,13 +398,15 @@ Node
       laid out as. Group is the @TO HLG@ an atom is coloured as; Highlight an
       HLG the node and its parts are coloured as in place of their own, and
       Reach, when set, how many levels below the node it reaches, 0 for the
-      node alone. Target is a link the node opens, and Tex the TeX of an atom
-      that has its own. Typeset says whether a node is set as maths; a node
-      saying nothing is set as the node holding it is. Parameters are the values a value drawn from
-      its expression is built over (see @TO rod@ and @TO specType@). For a
-      result drawn whole, Fallback is M2's own text of it and Code its input
-      spelling, and a documentation page carries its Html, the TypeNames it
-      resolves and the ExampleWidth its examples were archived at.
+      node alone. Target is a link the value opens. Font is the font the
+      node's atoms are set in, by its name: "MathNormal" for TeX's own maths,
+      a maths alphabet such as "MathBB", where Q is ℚ, and "MathCal", or a
+      text face such as "TextTT", the typewriter face code is spelled in; a
+      node naming none is set as the node holding it is, and code when none
+      does. Parameters are the values a value drawn from its expression is
+      built over (see @TO rod@ and @TO specType@). A documentation page
+      carries its Html, the TypeNames it resolves and the ExampleWidth its
+      examples were archived at.
     Example
       R = QQ[x, y];
       speek(rod ideal(x, y) ++ {Highlight => HLG "Keyword", Reach => 1})

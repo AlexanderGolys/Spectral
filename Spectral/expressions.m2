@@ -6,7 +6,7 @@ rod Holder := held -> rod' held#0
 -- and a label over or under an expression set their parts as maths.
 rod RowExpression := shape -> Rod {apply(shape, rod')}
 rod Divide := rod Parenthesize := rod UnderExpression := rod OverExpression :=
-	shape -> Rod {apply(shape, rod'), Typeset => true}
+	shape -> Rod {apply(shape, rod'), mathsFont}
 
 -- What reads as several terms is parenthesized beside an operator, and anything
 -- compound as the base of a power.
@@ -32,14 +32,14 @@ rod Sum := sum -> (
 	Rod {RowExpression flatten apply(#sum, i -> (
 		term := rod' sum#i;
 		if i == 0 or laidOutAs(term, {Minus}) then {term} else {sign "+", term}
-	)), Typeset => true}
+	)), mathsFont}
 )
 scan({(Product, "·"), (TensorProduct, "⊗"), (DirectSum, "⊕"), (Equation, " == ")},
 	(class', text) -> rod class' := factors -> Rod {RowExpression between(sign text,
-		apply(toList factors, factor -> operand(factor, looseOperand))), Typeset => true})
+		apply(toList factors, factor -> operand(factor, looseOperand))), mathsFont})
 
 rod Minus := minus -> Rod {RowExpression {sign "-", operand(minus#0, looseOperand)},
-	Typeset => true}
+	mathsFont}
 
 rod SheafExpression := shape -> Rod {RowExpression apply(toList shape, rod')}
 
@@ -49,18 +49,18 @@ rod SheafExpression := shape -> Rod {RowExpression apply(toList shape, rod')}
 rod Adjacent := application -> Rod {RowExpression join({rod' application#0},
 	if instance(application#1, Array) or instance(application#1, Parenthesize) then
 		{} else {space},
-	{operand(application#1, looseBase)}), Typeset => true}
+	{operand(application#1, looseBase)}), mathsFont}
 
 -- A power raises its exponent over its base, as a superscript does.
 rod Power := rod Superscript := power -> Rod {Superscript {operand(power#0,
-	looseBase), rod' power#1}, Typeset => true}
+	looseBase), rod' power#1}, mathsFont}
 
 -- A subscript lowers its index, a sequence of indices spelled with commas.
 rod Subscript := indexed -> Rod {Subscript {operand(indexed#0, looseOperand),
 	if instance(indexed#1, Sequence) then
 		Rod {RowExpression between(Rod {Holder {","}, Highlight => HLG "Delimiter"},
 			apply(toList indexed#1, rod'))}
-	else rod' indexed#1}, Typeset => true}
+	else rod' indexed#1}, mathsFont}
 
 -- f(x, y): a function applied to its arguments.
 rod FunctionApplication := application -> Rod {RowExpression {
@@ -82,7 +82,7 @@ rod MapExpression := map -> (
 					Rod {OverExpression {arrow, rod' map#2}}
 				else arrow,
 				rod' map#1
-			}), Typeset => true}
+			}), mathsFont}
 )
 
 -- `key => entry` is drawn as the option it builds; the other binary operators
@@ -99,19 +99,22 @@ rod BinaryOperation := operation -> (
 			RowExpression {operand(left, looseOperand), sign "⊗",
 				operand(right, looseOperand)}
 		else RowExpression {operand(left, looseOperand), space, rod' operator, space,
-			operand(right, looseOperand)}, Typeset => true}
+			operand(right, looseOperand)}, mathsFont}
 )
 
 -- A matrix is a grid of its entries in parentheses, which only holds them, so
 -- they keep their own setting; its Degrees, of its rows and its columns, stand
--- beside it, and any other
--- option under it. A table is the same grid, bare, and a vector a column.
+-- beside it, and any other option under it. A zero map is spelled by M2 as
+-- {zero => (target, source)}, and drawn as M2 prints it: 0. A table is the same
+-- grid, bare, and a vector a column.
 rod MatrixExpression := matrix -> (
 	rows := select(toList matrix, row -> not instance(row, Option));
 	options := select(toList matrix, row -> instance(row, Option));
 	degrees := select(options, option -> option#0 === Degrees);
 	entries' := apply(rows, row -> apply(toList row, rod'));
-	if #degrees > 0 then
+	if any(options, option -> option#0 === symbol zero) then
+		rod' 0
+	else if #degrees > 0 then
 		Rod {new MatrixExpression from append(entries', Degrees => apply(
 			degrees#0#1, side -> apply(side, rod')
 		))}
