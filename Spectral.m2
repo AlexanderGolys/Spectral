@@ -46,8 +46,7 @@ knownGroups = null
 HLG = new SelfInitializingType of BasicList
 new HLG from String := (HLG, name) -> (
 	if knownGroups =!= null and not member(name, knownGroups) then
-		error("no highlight group " | format name | "; there are "
-				| demark(", ", knownGroups));
+		error("the shell has no highlight group " | format name);
 	{ name }
 )
 net HLG := toString HLG := group -> toString Adjacent { class group, format group#0 }

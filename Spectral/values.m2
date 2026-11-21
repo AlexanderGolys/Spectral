@@ -67,11 +67,13 @@ rankOneDropped = method()
 
 rankOneDropped Thing := identity
 
-rankOneDropped Adjacent := rankOneDropped DirectSum := BasicList => e -> apply(e, rankOneDropped)
+rankOneDropped Adjacent := rankOneDropped DirectSum := BasicList => e ->
+	apply(e, rankOneDropped)
 
 rankOneDropped Superscript := power -> (
 	if instance(power#1, OneExpression)
-    then power#0
+	then
+		power#0
 	else power
 )
 shape Module := shape CoherentSheaf := module' -> shape rankOneDropped expression module'
@@ -81,7 +83,7 @@ shape MutableMatrix := matrix' -> shape select(expression matrix', entries ->
 
 -- `key => value`, the key coloured as an option's name is in code when it is
 -- spelled by a symbol or a string, whatever builds the pair.
-optionKey = method() 
+optionKey = method()
 optionKey Thing := shape
 optionKey Holder := key -> optionKey key#0
 optionKey Symbol := optionKey String := key -> typewritten(toString key, HLG "Option")
@@ -121,7 +123,8 @@ shape BettiTally := b -> (
 	slants := sort unique((key -> key#2 - key#0) \ keys b);
 	counted := chosen -> sum(select(keys b, chosen), key -> b#key);
 	counts := prepend((i -> counted(key -> key#0 == i)) \ degrees,
-		(slant -> (i -> counted(key -> key#0 == i and key#2 - key#0 == slant)) \ degrees) \ slants);
+		(slant -> (i -> counted(key -> key#0 == i and key#2 - key#0 == slant))
+				\ degrees) \ slants);
 	cells := (line -> select(separate(" ", line), cell -> #cell > 0)) \ unstack net b;
 	label := text -> typewritten(text, HLG "Muted");
 	count := (text, n) -> typewritten(text, if n == 0 then
@@ -141,10 +144,11 @@ shape Descent := tree -> shaped(TreeExpression, ((class', subtree) ->
 		{ typewritten(toString net class', HLG "Type"), shape subtree })
 		\ sort(pairs tree, toString@@net@@first))
 
--- The language's own objects: text, timings, counters and indexed variables. A
--- timing is its value above the line M2 says how long it took on.
-lined = lines' -> shaped(Table, (line -> { typewritten(line, HLG "Text") }) \ lines')
-shape Net := lined@@unstack
+-- The language's own objects: text, timings, counters and indexed variables.
+-- Text is its lines, coloured as its class is, a string as a string; a timing
+-- is its value above the line M2 says how long it took on.
+lined = (lines', group) -> shaped(Table, (line -> { typewritten(line, group) }) \ lines')
+shape Net := text -> lined(unstack net text, highlightGroup class text)
 shape Time := timed -> shaped(Table, { { shape timed#1 },
 	{ typewritten(last unstack net timed, HLG "Comment") } })
 shape AtomicInt := counter -> shape new ZZ from counter
@@ -171,7 +175,7 @@ shape Function := shape Command := runnable -> (
 			lines' = append(drop(lines', -1), substring(last lines', 0, position#4));
 			lines' = prepend(substring(first lines', position#2), drop(lines', 1))
 		);
-		lined lines'
+		lined(lines', highlightGroup Net)
 	)
 )
 
