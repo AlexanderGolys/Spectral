@@ -16,19 +16,24 @@ linkedTags TO2 := link -> { link#0 }
 linkedTags TOH := link -> { link#0 }
 
 -- The HTML of a page with each link to a node pointing at the node's key, spelled
--- as the M2 string `help` reads, so the shell can open it. M2 links a tag wherever
--- it appears with the same target, so the target its own link gets is the one to
--- replace.
+-- as the M2 string `help` reads, so the shell can open it; a link to a topic, a
+-- node named by its title as "Hilbert functions and free resolutions" is rather
+-- than by code, is marked data-topic. A type's node is keyed by its name as a
+-- string too, "Ring", so a topic is a string no symbol is spelled as. M2 links a
+-- tag wherever it appears with the same target, so the target its own link gets
+-- is the one to replace.
 keysLinked = page' -> fold((linked, tag) -> (
 	anchor := html TO { tag };
 	target := regex(///href="[^"]*"///, anchor);
 	key := fold((escaped, entity) -> replace(entity#0, entity#1, escaped),
 		format format tag,
 		{ ("&", "&amp;"), ("\"", "&quot;"), ("<", "&lt;"), (">", "&gt;") });
+	name := (makeDocumentTag tag).Key;
+	topic := if instance(name, String) and not isGlobalSymbol name then " data-topic" else "";
 	if target === null then
 		linked
-	else demark("href=\"" | key | "\"", separate(regexQuote substring(target#0, anchor),
-		linked))
+	else demark("href=\"" | key | "\"" | topic,
+		separate(regexQuote substring(target#0, anchor), linked))
 ), html page', unique linkedTags page')
 
 -- Each match of a pattern in a page replaced by what a function makes of the

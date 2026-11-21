@@ -29,6 +29,36 @@ typewritten = (text, group) -> atom(text, group, "TextTT")
 -- A name stands for the value it holds, coloured and set as that value is.
 shape Symbol := name -> atom(toString name, highlightGroup class value name,
 	font class value name)
+-- A name in what a ring's value is spelled by that is one of the ring's
+-- generators is held as a generator, and set as a ring element is whatever the
+-- name holds now: the T of a degrees ring, unbound in the session, as 1 - T^2.
+Generator = new WrapperType of Holder
+shape Generator := held -> atom(toString held#0, highlightGroup RingElement, font RingElement)
+generatorsHeld = method()
+generatorsHeld(Thing, List) := (part, names) -> part
+generatorsHeld(Symbol, List) := (name, names) -> (
+	if member(name, names) then
+		Generator { name }
+	else name
+)
+generatorsHeld(BasicList, List) := BasicList => (parts, names) ->
+	apply(parts, part -> generatorsHeld(part, names))
+-- The names a ring's generators are spelled by, its coefficient rings' too: the
+-- a of a_1, and none for a ring no generators build, as ZZ or QQ.
+generatorNames = method()
+generatorNames Ring := List => ring' -> {}
+generatorNames PolynomialRing := List => ring' -> join(gens ring' / generatorName @@ baseName,
+	generatorNames coefficientRing ring')
+generatorNames QuotientRing := List => generatorNames @@ ambient
+generatorNames GaloisField := List => generatorNames @@ ambient
+generatorNames FractionField := List => generatorNames @@ baseRing
+generatorName = method()
+generatorName Symbol := Symbol => identity
+generatorName IndexedVariable := Symbol => variable -> variable#0
+shape RingElement := element ->
+	shape generatorsHeld(expression element, generatorNames ring element)
+shape Matrix := matrix' -> shape generatorsHeld(expression matrix', generatorNames ring matrix')
+shape Ideal := ideal' -> shape generatorsHeld(expression ideal', generatorNames ring ideal')
 -- An operator keyword is coloured as an operator; any other is a keyword.
 shape Keyword := keyword -> typewritten(toString keyword,
 	if operatorAttributes#?keyword then
@@ -49,7 +79,7 @@ shape Ring := ring' -> (
 		atom(first characters toString ring', highlightGroup Ring, "MathBB")
 	else if instance(description, Ring) then
 		atom(toString ring', highlightGroup class ring', font class ring')
-	else shape optionsDropped description
+	else shape generatorsHeld(optionsDropped description, generatorNames ring')
 )
 optionsDropped = method(Dispatch => Thing)
 optionsDropped Thing := identity
@@ -82,11 +112,13 @@ rankOneDropped Superscript := power -> (
 		power#0
 	else power
 )
-shape Module := module' -> shape rankOneDropped expression module'
+shape Module := module' ->
+	shape rankOneDropped generatorsHeld(expression module', generatorNames ring module')
 shape CoherentSheaf := sheaf -> shape rankOneDropped expression sheaf
 -- A mutable matrix is drawn as a matrix is, without the mark M2 spells it apart by.
-shape MutableMatrix := matrix' -> shape select(expression matrix', entries ->
-		not (instance(entries, Option) and entries#0 === symbol MutableMatrix))
+shape MutableMatrix := matrix' -> shape generatorsHeld(select(expression matrix', entries ->
+		not (instance(entries, Option) and entries#0 === symbol MutableMatrix)),
+	generatorNames ring matrix')
 
 -- `key => value`, the key coloured as an option's name is in code when it is
 -- spelled by a symbol or a string, whatever builds the pair.
@@ -145,10 +177,19 @@ shape BettiTally := b -> (
 		}))@@toSequence \ transpose { drop(cells, 1), counts }))
 )
 
--- A class hierarchy is a tree of its subclasses, each level sorted as M2's own
--- net sorts it, a class's name a label coloured as a type.
+-- A type is its name, but one M2 spells with a star beneath it, the class of
+-- the numbers of every precision, is that name subscripted by the star: RR' is ℝ_*.
+shape Type := type' -> (
+	rows := unstack net type';
+	if #rows == 2 and replace(" ", "", rows#1) == "*" then
+		shape Subscript { value rows#0, symbol * }
+	else atom(toString type', highlightGroup Type, font Type)
+)
+-- A class hierarchy is a tree of what each class holds, each level sorted as
+-- M2's own net sorts it, each drawn as the value it is: a type by its name, ZZ
+-- as ℤ, InexactNumber^* with its star raised, a command as a command.
 shape Descent := tree -> shaped(TreeExpression, ((class', subtree) ->
-		{ typewritten(toString net class', HLG "Type"), shape subtree })
+		{ shape class', shape subtree })
 		\ sort(pairs tree, toString@@net@@first))
 
 -- The language's own objects: text, timings, counters and indexed variables.
