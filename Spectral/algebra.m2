@@ -53,6 +53,8 @@ rod QuotientRing := ring' -> described(ring', shape -> {ambient ring',
 rod FractionField := field' -> described(field', shape -> {shape#1 =>
 		last field'.baseRings})
 rod RingFamily := family -> named(family, "Type")
+-- A ring's name is coloured as a type, as the rings M2 spells by themselves are.
+nameGroup Ring := type -> HLG "Type"
 rod ScriptedFunctor := functor -> named(functor, "Function")
 
 -- An ideal is over its ring.

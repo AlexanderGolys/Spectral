@@ -34,7 +34,22 @@ rod Sum := sum -> (
 		if i == 0 or laidOutAs(term, {Minus}) then {term} else {sign "+", term}
 	)), mathsFont}
 )
-scan({(Product, "·"), (TensorProduct, "⊗"), (DirectSum, "⊕"), (Equation, " == ")},
+-- Whether a drawing begins with one laid out as one of `classes`, through the
+-- shapes that set their first part first on its line: 2^3 begins with a number.
+beginsWith := (drawn, classes) -> laidOutAs(drawn, classes) or (
+	any({RowExpression, Subscript, Superscript}, instance_(drawn#Shape))
+		and beginsWith(drawn#Shape#0, classes)
+)
+-- A product is its factors side by side, as maths juxtaposes them, so x*y is
+-- drawn as xy is; a dot stands before a factor beginning with a number or a
+-- negation, which would read on from the factor before it: x·2, x·-y.
+rod Product := factors -> (
+	drawn := apply(toList factors, factor -> operand(factor, looseOperand));
+	Rod {RowExpression flatten apply(#drawn, i ->
+			if i > 0 and beginsWith(drawn#i, {Number, Minus}) then
+			{sign "·", drawn#i} else {drawn#i}), mathsFont}
+)
+scan({(TensorProduct, "⊗"), (DirectSum, "⊕"), (Equation, " == ")},
 	(class', text) -> rod class' := factors -> Rod {RowExpression between(sign text,
 		apply(toList factors, factor -> operand(factor, looseOperand))), mathsFont})
 

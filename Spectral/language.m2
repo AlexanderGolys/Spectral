@@ -28,9 +28,9 @@ rod Nothing := nothing -> typewritten("null", "Builtin")
 rod Type := type -> Rod {Holder {toString type}, Group => HLG "Type"}
 rod Package := package -> Rod {Holder {toString package}, Group => HLG "Package"}
 
--- A name stands for its value; an indexed variable x_1 is drawn as the
--- subscript it is spelled with.
-rod Symbol := name -> Rod {Holder {toString name}, Group => HLG "Variable"}
+-- A name stands for its value, coloured as a name holding it is; an indexed
+-- variable x_1 is drawn as the subscript it is spelled with.
+rod Symbol := name -> Rod {Holder {toString name}, Group => nameGroup class value name}
 rod IndexedVariable := variable -> rod' new Subscript from toList variable
 
 -- An operator keyword is coloured as an operator, set as maths among maths;

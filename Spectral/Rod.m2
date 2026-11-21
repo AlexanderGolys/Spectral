@@ -32,6 +32,9 @@ specType = method(Dispatch => Thing, TypicalValue => Rod)
 -- typeParameters x: the values x's type is over, none for most: a module's
 -- ring.
 typeParameters = method(Dispatch => Thing, TypicalValue => List)
+-- nameGroup T: the colour of a name standing for a value of class T in a
+-- drawing, the name's own when its value is not shown: a ring's is a type's.
+nameGroup = method(Dispatch => Type, TypicalValue => HLG)
 -- speek x: the drawing of x laid out as the table it is, one level deep.
 speek = method(Dispatch => Thing, TypicalValue => Rod)
 -- rod' x, the drawing of a part, by its name when it has one, rod'_n x,
@@ -150,10 +153,12 @@ spelledAsM2 = x -> Rod { Holder { try toString x
      Class => class x,
      Group => HLG "Text" }
 
--- The expression of a value with each value it is built over that a global
--- name holds drawn in its place: a parameter is a value spelled by its
--- expression, held or bare, as M2 spells a named ring R by Holder{R} or R
--- itself, or `spelling => value` for one spelled otherwise.
+-- The expression of a value with the values it is built over drawn in their
+-- places: a parameter is a value spelled by its expression, held or bare, as
+-- M2 spells a named ring R by Holder{R} or R itself, and drawn in its place
+-- whether a name holds it or not, so (R/J)[x] keeps the J that R/J is drawn
+-- over though no name holds R/J; or `spelling => value` for one spelled
+-- otherwise, drawn in its place only by the name holding it.
 heldInPlace := (shape, parameters) -> fold((held, parameter) -> (
     (spelling, x) := if instance(parameter, Option) then
             toSequence parameter
@@ -165,7 +170,7 @@ heldInPlace := (shape, parameters) -> fold((held, parameter) -> (
         else if instance(part, Expression) and not instance(part, Holder) then
         apply(part, inPlace)
     else part;
-    if globalNames#?x then
+    if globalNames#?x or not instance(parameter, Option) then
         inPlace held
     else held
 ), shape, parameters)
@@ -204,7 +209,7 @@ rod' = deepened(x -> (
     if name === null then
         drawnByValue x
     else if resolutions == 0 then
-        Rod { Holder { name }, Class => Symbol, Group => HLG "Variable",
+        Rod { Holder { name }, Class => Symbol, Group => nameGroup class x,
             mathsFont }
     else within(resolutions - 1, x, () -> drawnByValue x)
 ), (depth, x) -> within(depth, x, () -> drawnByValue x))
@@ -214,6 +219,7 @@ rod Rod := rod'
 -- until `depth` resolves them: R^2 is Module[R], and at depth one
 -- Module[QQ[x, y]] for R = QQ[x, y].
 typeParameters Thing := x -> {}
+nameGroup Thing := type -> HLG "Variable"
 specType' = deepened(x -> specType x, (depth, x) -> within(0, x, () -> (
     type := rod' class x;
     parameters := typeParameters x;

@@ -2,7 +2,7 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "0.8.0",
+	Version => "0.8.1",
 	Date => "November 20, 2026",
 	Headline => "drawing values as structured, typed trees",
 	PackageImports => { "Complexes", "Varieties", "Text" },
@@ -26,6 +26,7 @@ export {
 	"speek",
 	"speek'",
 	"typeParameters",
+	"nameGroup",
 	"HLG",
 	"UnderExpression",
 	"OverExpression",
@@ -226,6 +227,8 @@ Node
   Key
     rod
     rod'
+    nameGroup
+    (nameGroup, Thing)
   Headline
     draw a value as a tree of shapes
   Usage
@@ -251,7 +254,9 @@ Node
       by its name when it has one. A value laid out from an expression instead
       gives the expression as its Shape and the values it is built over as its
       Parameters; each part of the expression is then drawn in turn, and each
-      parameter a name holds is drawn by that name.
+      parameter a name holds is drawn by that name. A name is coloured as
+      nameGroup of its value's class says, a variable unless installed
+      otherwise: a ring's name as a type.
     Example
       R = QQ[x, y];
       I = ideal(x^2, y^3);
