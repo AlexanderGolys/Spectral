@@ -159,6 +159,12 @@ shape MapExpression := map' -> (
 				else arrow, shape map'#1 })
 )
 
+-- A degree, a module's or one a complex is graded by, set apart from the
+-- values beside it in the colour of degrees.
+degreeShape = method(Dispatch => Thing)
+degreeShape ZZ := n -> atom(toString n, HLG "Degree", "MathNormal")
+degreeShape List := degree -> shaped(List, degreeShape \ degree)
+
 -- A matrix is a grid of its entries, its Degrees, of its rows and its columns,
 -- beside it and any other option under it. A zero map, which M2 spells
 -- {zero => (target, source)}, is 0, as M2 prints it.
@@ -170,7 +176,8 @@ shape MatrixExpression := matrix' -> (
 	if any(options, option -> option#0 === symbol zero) then
 		shape 0
 	else if #degrees > 0 then
-		shaped(MatrixExpression, merge(grid, hashTable { Degrees => (side -> shape \ side)
+		shaped(MatrixExpression, merge(grid, hashTable { Degrees => (side ->
+				degreeShape \ side)
 				\ degrees#0#1 }, last))
 	else if #options > 0 then
 		shaped(Table, prepend({ shaped(MatrixExpression, grid) },
