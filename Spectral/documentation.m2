@@ -8,7 +8,7 @@
 exampleWidth = 77
 
 -- The nodes a page links to, by their tags.
-linkedTags = method()
+linkedTags = method(Dispatch => Thing)
 linkedTags Thing := part -> {}
 linkedTags Hypertext := part -> flatten(linkedTags \ toList part)
 linkedTags TO := link -> { link#0 }

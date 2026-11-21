@@ -96,7 +96,7 @@ shape Product := factors -> (
 )
 -- Whether a factor's drawing begins with a numeral or a minus sign: a value's
 -- as its expression's, a power's or a script's as its base's.
-leadsWithNumber = method()
+leadsWithNumber = method(Dispatch => Thing)
 leadsWithNumber Thing := x -> (
 	e := expression x;
 	instance(e, Expression) and leadsWithNumber e
