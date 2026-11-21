@@ -112,43 +112,20 @@ shapes = { Holder, RowExpression, Parenthesize, Divide, Subscript, Superscript,
 namedClasses = { Ring, Ideal, Module, Matrix, RingMap, Variety, CoherentSheaf,
 	SheafMap, Complex, ComplexMap }
 
--- A drawing, the format string a value is shown by: a table of its fields,
--- read as x.Shape, x.Highlight, …: the Shape it lays out, an expression of one
--- of the shapes whose parts are drawings in turn; the Class it is laid out as;
--- an atom's own colour Group; a Highlight colouring it and its parts in place
--- of their own, reaching Reach levels below it, all when unset; the Target it
--- links to; the Font its atoms are set in unless they say otherwise; the
--- Parameters of a value drawn from its expression, the values it is built
--- over; and, for a documentation page, its Html, the TypeNames it resolves and
--- the ExampleWidth its examples were archived at. M2 prints it as
--- the expression it is: rod(1/2) is Rod{Divide{…}, Class => Divide}, printing
--- as 1/2.
-Rod = new SelfInitializingType of HashTable
+
 -- f x and f_n x: a function of one value, any value, a sequence too, and the
 -- same function n levels deep: rod'_1 x is x drawn with its names resolved
 -- once. atDepth#f is the function of (n, x) that f_n x calls.
 DepthFunction = new Type of FunctionClosure
+
 atDepth = new MutableHashTable
+
 DepthFunction_ZZ := FunctionClosure => (f, depth) -> x -> atDepth#f(depth, x)
 deepened = (shallow, deep) -> (
 	f := new DepthFunction from shallow;
 	atDepth#f = deep;
 	f
 )
-
--- rod x: x drawn by its value, any value a global name holds inside it drawn
--- by that name. Install rod for a class to draw its values, returning a Rod.
-rod = method(Dispatch => Thing, TypicalValue => Rod)
--- specType x: the type annotation shown beside x, its class over its
--- typeParameters by their names: 1/2 is QQ, and R^2 is Module[R].
-specType = method(Dispatch => Thing, TypicalValue => Rod)
--- typeParameters x: the values x's type is over, none for most: a module's
--- ring.
-typeParameters = method(Dispatch => Thing, TypicalValue => List)
--- speek x: the drawing of x laid out as the table it is, one level deep.
-speek = method(Dispatch => Thing, TypicalValue => Rod)
--- rod' x, the drawing of a part, by its name when it has one, rod'_n x,
--- specType'_n x and speek'_n x are DepthFunctions, made where they are drawn.
 
 -- How a value is drawn, class by class, in the file of its subject.
 load "./Spectral/Rod.m2"
@@ -483,3 +460,6 @@ L#0 = L
 assert instance(rod' L, Rod)
 ///
 end--
+
+
+
