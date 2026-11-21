@@ -1,7 +1,7 @@
 -- -*- coding: utf-8 -*-
 newPackage(
 	"Spectral",
-	Version => "1.0.0",
+	Version => "1.0.1",
 	Date => "November 21, 2026",
 	Headline => "values serialized for the Spectral shell",
 	PackageImports => { "Complexes", "Varieties", "Text" },
