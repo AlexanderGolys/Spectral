@@ -28,11 +28,14 @@ shape ComplexMap := map' -> (
 	arranged := straight -> (
 		-- How far left of its degree's column each complex's modules sit, the row
 		-- each complex takes, and the rows its degrees are numbered on.
-		offsets := { 0, if straight then shift else 0 };
+		offsets := { 0, if straight then
+					shift
+				else 0 };
 		rows := if straight then { 1, 2 } else { 0, 1 };
 		numbered := if straight then
-				{ (0, 0, spans#0), (3, shift, spans#1) }
-			else { (2, 0, toList(min flatten spans .. max flatten spans)) };
+				{ (0, 0, spans#0), (3, shift, spans#1) } else { (2, 0, toList(
+					min flatten spans .. max flatten spans
+				)) };
 		-- The first column is the zero before the lowest degree.
 		lowest := min apply(2, k -> min spans#k - offsets#k);
 		column := (i, offset) -> i - offset - lowest + 1;
@@ -45,16 +48,18 @@ shape ComplexMap := map' -> (
 		arrows := k -> (
 			(lo, hi) := (first spans#k, last spans#k);
 			{ { at(k, lo), at(k, lo - 1), null }, { at(k, hi + 1), at(k, hi), null } }
-				| apply(drop(spans#k, 1), i -> { at(k, i), at(k, i - 1), (chains#k).dd_i })
+				| apply(drop(spans#k, 1), i -> { at(k, i), at(k, i - 1), (
+					chains#k
+				).dd_i })
 		);
 		DiagramExpression {
 			pieces 0 | pieces 1 | flatten apply(numbered, (row', offset, span') ->
-				apply(span', i -> { { row', column(i, offset) }, i })),
+					apply(span', i -> { { row', column(i, offset) }, i })),
 			arrows 0 | arrows 1 | apply(components, i -> { at(0, i),
 				{ rows#1, column(i + shift, offsets#1) }, map'_i })
 		}
 	);
 	shape(if shift == 0 or #components == 0 then
-			arranged false
-		else append(arranged false, Straight => arranged true))
+				arranged false
+			else append(arranged false, Straight => arranged true))
 )
