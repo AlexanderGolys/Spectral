@@ -57,6 +57,8 @@ shape UnderExpression := labelled -> shaped(UnderExpression, { shape labelled#0,
 shape OverExpression := labelled -> shaped(OverExpression, { shape labelled#0,
 	shape labelled#1 })
 shape Parenthesize := held -> parenthesized held#0
+-- A map's label is its matrix and its name, the shell showing one.
+shape MapLabel := label -> shaped(MapLabel, { shape label#0, shape label#1 })
 
 -- A list's items are drawn by their expressions, so a ring a name holds keeps
 -- its name; each kind of list is fenced as M2 fences it.
@@ -162,8 +164,8 @@ shape MapExpression := map' -> (
 -- A degree, a module's or one a complex is graded by, set apart from the
 -- values beside it in the colour of degrees.
 degreeShape = method(Dispatch => Thing)
-degreeShape ZZ := n -> atom(toString n, HLG "Degree", "MathNormal")
-degreeShape List := degree -> shaped(List, degreeShape \ degree)
+degreeShape ZZ := n -> atom(toString n, HLG "Degree", "TextTT")
+degreeShape List := degree -> atom(toString degree, HLG "Degree", "TextTT")
 
 -- A matrix is a grid of its entries, its Degrees, of its rows and its columns,
 -- beside it and any other option under it. A zero map, which M2 spells

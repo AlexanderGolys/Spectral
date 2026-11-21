@@ -28,6 +28,7 @@ export {
 	"AlignedExpression",
 	"DiagramExpression",
 	"TreeExpression",
+	"MapLabel",
 	"Straight"
 }
 
@@ -36,7 +37,7 @@ export {
 protect \ { symbol Shape, symbol Parts, symbol Atom, symbol Highlight, symbol Font,
 	symbol Rows, symbol Pieces, symbol Arrows, symbol typeNames, symbol PathSeparator,
 	symbol Elided, symbol FileScheme, symbol LineMark, symbol ColumnMark,
-	symbol RangeMark }
+	symbol RangeMark, symbol UnnamedMap }
 
 -- HLG "Operator": one of the shell's highlight groups, a unit value known by its
 -- name alone. The shell keeps the groups and tells them as it starts, so a name
@@ -65,7 +66,8 @@ Spelling = new HashTable from {
 	symbol FileScheme => "file://",
 	symbol LineMark => "#L",
 	symbol ColumnMark => ":C",
-	symbol RangeMark => "-L"
+	symbol RangeMark => "-L",
+	symbol UnnamedMap => "f"
 }
 
 -- A drawing as the shell reads it: its shape, named by the class it draws or
@@ -108,6 +110,9 @@ DiagramExpression = new HeaderType of Expression
 -- TreeExpression{{label, subtree}, …}: a hierarchy, each branch a label over
 -- its subtree.
 TreeExpression = new HeaderType of Expression
+-- MapLabel{matrix, name}: how a map is labelled, by its matrix or by its name,
+-- dd_i or f_i, the shell drawing the one its settings choose.
+MapLabel = new HeaderType of Expression
 
 load "./Spectral/expressions.m2"
 load "./Spectral/values.m2"
@@ -238,6 +243,7 @@ Node
     AlignedExpression
     DiagramExpression
     TreeExpression
+    MapLabel
     Straight
   Headline
     layouts the shell draws beyond Core's expressions
@@ -248,6 +254,8 @@ Node
       cell but the last. DiagramExpression{pieces, arrows} places pieces on a
       grid joined by labelled arrows, Straight giving the same diagram for a
       layout in characters. TreeExpression{{label, subtree}, …} is a hierarchy.
+      MapLabel{matrix, name} labels a map by its matrix or its name, as the
+      shell chooses.
     Example
       shape UnderExpression { 1, 2 }
 ///
