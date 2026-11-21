@@ -1,29 +1,46 @@
--- M2's expressions as the shell draws them: the classes it lays out as they are,
--- part by part, and the operators as rows of their operands and signs.
-
--- What reads as several terms is parenthesized beside an operator, and anything
--- compound as the base of a power.
-looseOperand = { Sum, Equation }
-looseBase = { Sum, Product, TensorProduct, Divide, Minus, Power, BinaryOperation }
+-- M2's expressions as the shell draws them: each class it lays out drawn by its
+-- own shape, part by part, and each operator as a row of its operands and signs.
 
 row = shaped_RowExpression
 parenthesized = part -> shaped(Parenthesize, { shape part })
-operand = (part, loose) -> (
-	if any(loose, instance_(expression part)) then
+operatorSign = text -> atom(text, HLG "Operator", "MathNormal")
+space = atom(" ", HLG "Canvas", "MathNormal")
+
+-- Whether an expression of a class is parenthesized beside an operator, where
+-- its own terms would read as the operator's, and as the base of a power, where
+-- the exponent would raise only its last part.
+bracketedAsOperand = method(Dispatch => Type)
+bracketedAsOperand Thing := class' -> false
+bracketedAsOperand Sum := class' -> true
+bracketedAsOperand Equation := class' -> true
+bracketedAsBase = method(Dispatch => Type)
+bracketedAsBase Thing := class' -> false
+bracketedAsBase Sum := class' -> true
+bracketedAsBase Product := class' -> true
+bracketedAsBase TensorProduct := class' -> true
+bracketedAsBase Divide := class' -> true
+bracketedAsBase Minus := class' -> true
+bracketedAsBase Power := class' -> true
+bracketedAsBase BinaryOperation := class' -> true
+operand = part -> (
+	if bracketedAsOperand class expression part then
 		parenthesized part
 	else shape part
 )
-signAtom = text -> atom(text, HLG "Operator", "MathNormal")
-space = atom(" ", HLG "Canvas", "MathNormal")
+base = part -> (
+	if bracketedAsBase class expression part then
+		parenthesized part
+	else shape part
+)
 
--- A value is drawn by its expression, down to what M2 spells by itself, an atom.
-byExpression = x -> (
+-- A value is drawn by its expression, down to what M2 spells by itself: an atom
+-- coloured and set as its class says.
+shape Thing := x -> (
 	e := expression x;
 	if instance(e, Holder) and e#0 === x then
-		leaf x
+		atom(toString x, highlightGroup class x, font class x)
 	else shape e
 )
-shape Thing := byExpression
 shape Holder := held -> shape held#0
 -- An expression holding a drawing already made, for parts no value spells.
 Drawn = new WrapperType of Holder
@@ -31,52 +48,79 @@ shape Drawn := held -> held#0
 -- An expression no shape is installed for is spelled as M2 spells it.
 shape Expression := e -> atom(toString e, HLG "Text", "TextTT")
 
--- The shapes the shell draws, part by part, and as rows of cells; a list's
--- items are drawn by their expressions, so a ring a name holds keeps its name.
-(class' -> shape class' := parts -> shaped(class', shape \ toList parts)) \ {
-	Divide, RowExpression, UnderExpression, OverExpression
-}
-(class' -> shape class' := items -> shaped(class', shape@@expression
-		\ toList items)) \ {
-			List, Array, Sequence, AngleBarList, VerticalList
-		}
-(class' -> shape class' := rows -> shaped(class', (cells -> shape \ toList cells)
-		\ toList rows)) \ { Table, AlignedExpression, TreeExpression }
+-- A fraction is its numerator over its denominator, a row its parts side by
+-- side; a label beneath or above its base keeps the base's baseline.
+shape Divide := fraction -> shaped(Divide, { shape fraction#0, shape fraction#1 })
+shape RowExpression := parts -> shaped(RowExpression, shape \ toList parts)
+shape UnderExpression := labelled -> shaped(UnderExpression, { shape labelled#0,
+	shape labelled#1 })
+shape OverExpression := labelled -> shaped(OverExpression, { shape labelled#0,
+	shape labelled#1 })
 shape Parenthesize := held -> parenthesized held#0
+
+-- A list's items are drawn by their expressions, so a ring a name holds keeps
+-- its name; each kind of list is fenced as M2 fences it.
+shape List := items -> shaped(List, shape@@expression \ toList items)
+shape Array := items -> shaped(Array, shape@@expression \ toList items)
+shape Sequence := items -> shaped(Sequence, shape@@expression \ toList items)
+shape AngleBarList := items -> shaped(AngleBarList, shape@@expression \ toList items)
+shape VerticalList := items -> shaped(VerticalList, shape@@expression \ toList items)
+
+-- A grid is its rows of cells; aligned rows are cells in columns, the last
+-- running on; a tree is its branches, each a label over its subtree.
+shape Table := rows -> shaped(Table, (cells -> shape \ toList cells) \ toList rows)
+shape AlignedExpression := rows -> shaped(AlignedExpression, (cells -> shape
+		\ toList cells) \ toList rows)
+shape TreeExpression := branches -> shaped(TreeExpression, (branch' -> {
+	shape branch'#0, shape branch'#1
+}) \ toList branches)
 
 -- A sum is its terms between plus signs, a negative term's minus standing in
 -- for its plus; the empty sum is 0.
-shape Sum := terms -> if #terms == 0 then shape 0 else row delete(null, mingle(
-	apply(toList terms, shape),
-	apply(drop(toList terms, 1), term -> if not instance(term, Minus) then
-				signAtom "+")
-))
+shape Sum := terms -> (
+	if #terms == 0 then
+		return shape 0;
+	pluses := (term -> if not instance(term, Minus) then
+				operatorSign "+") \ drop(toList terms, 1);
+	row delete(null, mingle(shape \ toList terms, pluses))
+)
 -- A product is its factors side by side, as maths juxtaposes them, a dot only
 -- before one beginning with a number or a negation, which would run into the
--- factor before it: 2xy², but x·2 and x·-y.
-shape Product := factors -> if #factors == 0 then shape 1 else row delete(null, mingle(
-	apply(toList factors, factor -> operand(factor, looseOperand)),
-	apply(drop(toList factors, 1), factor -> if leadsWithNumber factor then
-				signAtom "·")
-))
-leadsWithNumber = factor -> (
-	e := expression factor;
-	instance(e, Minus) or (instance(e, Holder) and instance(e#0, Number))
-		or (any({ Power, Subscript, Superscript }, instance_e) and leadsWithNumber e#0)
+-- factor before it: 2xy², but x·2 and x·-y. The empty product is 1.
+shape Product := factors -> (
+	if #factors == 0 then
+		return shape 1;
+	dots := (factor -> if leadsWithNumber factor then
+				operatorSign "·") \ drop(toList factors, 1);
+	row delete(null, mingle(operand \ toList factors, dots))
 )
-shape Minus := negated -> row { signAtom "-", operand(negated#0, looseOperand) }
-scan({ (TensorProduct, "⊗"), (DirectSum, "⊕"), (Equation, " == ") }, (class', text) ->
-		shape class' := terms -> row between(signAtom text, apply(toList terms, term ->
-				operand(term, looseOperand))))
+-- Whether a factor's drawing begins with a numeral or a minus sign: a value's
+-- as its expression's, a power's or a script's as its base's.
+leadsWithNumber = method()
+leadsWithNumber Thing := x -> (
+	e := expression x;
+	instance(e, Expression) and leadsWithNumber e
+)
+leadsWithNumber Expression := e -> false
+leadsWithNumber Holder := held -> instance(held#0, Number)
+leadsWithNumber Minus := negated -> true
+leadsWithNumber Power := power -> leadsWithNumber power#0
+leadsWithNumber Subscript := indexed -> leadsWithNumber indexed#0
+leadsWithNumber Superscript := raised -> leadsWithNumber raised#0
+shape Minus := negated -> row { operatorSign "-", operand negated#0 }
+shape TensorProduct := factors -> row between(operatorSign "⊗", operand \ toList factors)
+shape DirectSum := summands -> row between(operatorSign "⊕", operand \ toList summands)
+shape Equation := sides -> row between(row { space, operatorSign toString symbol ==,
+	space }, operand \ toList sides)
 
 -- A power raises its exponent over its base, as a superscript does; a subscript
 -- lowers its index, a sequence of indices spelled with commas.
-shape Power := shape Superscript := power -> shaped(Superscript, {
-	operand(power#0, looseBase), shape power#1
-})
-shape Subscript := indexed -> shaped(Subscript, { operand(indexed#0, looseOperand),
+shape Power := power -> shaped(Superscript, { base power#0, shape power#1 })
+shape Superscript := raised -> shaped(Superscript, { base raised#0, shape raised#1 })
+shape Subscript := indexed -> shaped(Subscript, { operand indexed#0,
 	if instance(indexed#1, Sequence) then
-		row between(atom(",", HLG "Delimiter", "MathNormal"), shape \ toList indexed#1)
+		row between(atom(toString symbol ,, HLG "Delimiter", "MathNormal"), shape
+				\ toList indexed#1)
 	else shape indexed#1 })
 
 -- frac R, cokernel M: a function applied by juxtaposition, a space between it
@@ -84,7 +128,7 @@ shape Subscript := indexed -> shaped(Subscript, { operand(indexed#0, looseOperan
 -- OO_X(1); f(x, y): a function applied to its arguments.
 shape Adjacent := application -> row join({ shape application#0 },
 	if instance(application#1, Array) or instance(application#1, Parenthesize) then
-		{} else { space }, { operand(application#1, looseBase) })
+		{} else { space }, { base application#1 })
 shape FunctionApplication := application -> row { shape application#0,
 	if instance(application#1, Sequence) then
 		shape application#1
@@ -97,12 +141,10 @@ shape BinaryOperation := operation -> (
 	if operator === symbol => then
 		shape new Option from { left, right }
 	else if operator === symbol ^** then
-		shaped(Superscript, { operand(left, looseBase), row { signAtom "⊗",
-			shape right } })
+		shaped(Superscript, { base left, row { operatorSign "⊗", shape right } })
 	else if operator === symbol ** then
-		row { operand(left, looseOperand), signAtom "⊗", operand(right, looseOperand) }
-	else row { operand(left, looseOperand), space, signAtom toString operator, space,
-		operand(right, looseOperand) }
+		row { operand left, operatorSign "⊗", operand right }
+	else row { operand left, space, operatorSign toString operator, space, operand right }
 )
 
 -- A map is target ⟵ source, its label over the arrow; a chain of maps is one
@@ -138,12 +180,13 @@ shape MatrixExpression := matrix' -> (
 -- A vector is a column; SparseVectorExpression{n, {(i, x), …}} the vector of
 -- length n with x at i, zeros and all; SparseMonomialVectorExpression the sum
 -- of each a·m times the i-th basis vector, which M2 spells <i>.
-shape VectorExpression := vector' -> shape new MatrixExpression from apply(toList vector',
-	entry -> { entry })
+shape VectorExpression := vector' -> shape new MatrixExpression from ((entry -> { entry })
+		\ toList vector')
 shape SparseVectorExpression := sparse -> (
-	entries := new MutableList from sparse#0 : expression 0;
-	scan(sparse#1, (i, entry) -> entries#i = entry);
-	shape VectorExpression toList entries
+	entries := hashTable sparse#1;
+	shape VectorExpression((i -> if entries#?i then
+				entries#i
+			else expression 0) \ toList(0 ..< sparse#0))
 )
 shape SparseMonomialVectorExpression := sparse -> shape sum(sparse#1, (i, m, a) ->
 		expression a*expression m*Drawn { atom("<" | toString i | ">",
@@ -163,5 +206,5 @@ shape DiagramExpression := diagram -> shaped(DiagramExpression, hashTable {
 -- An expression as the tree of its classes, each over its parts; a part that is
 -- no expression, or holds one value, is drawn as itself.
 branch = e -> { class e, if instance(e, Expression) and not instance(e, Holder) then
-			new TreeExpression from apply(toList e, branch)
+			new TreeExpression from branch \ toList e
 		else e }

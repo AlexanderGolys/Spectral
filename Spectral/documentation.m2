@@ -10,8 +10,10 @@ exampleWidth = 77
 -- The nodes a page links to, by their tags.
 linkedTags = method()
 linkedTags Thing := part -> {}
-linkedTags Hypertext := part -> flatten apply(toList part, linkedTags)
-linkedTags TO := linkedTags TO2 := linkedTags TOH := link -> { link#0 }
+linkedTags Hypertext := part -> flatten(linkedTags \ toList part)
+linkedTags TO := link -> { link#0 }
+linkedTags TO2 := link -> { link#0 }
+linkedTags TOH := link -> { link#0 }
 
 -- The HTML of a page with each link to a node pointing at the node's key, spelled
 -- as the M2 string `help` reads, so the shell can open it. M2 links a tag wherever
